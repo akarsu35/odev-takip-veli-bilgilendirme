@@ -3,7 +3,9 @@ import http from 'http'
 import { PrismaClient } from '@prisma/client'
 
 // Ensure Prisma receives DATABASE_URL from process.env
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.DATABASE_URL,
+})
 const PORT = process.env.PORT || 4000
 
 function sendJSON(res, status, data) {
