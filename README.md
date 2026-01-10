@@ -20,3 +20,4 @@ View your app in AI Studio: https://ai.studio/apps/temp/1
    `npm run dev`
 # -dev-takip_veli-bilgilendirme
 # odev-takip_veli-bilgilendirme
+# odev-takip-veli-bilgilendirme
