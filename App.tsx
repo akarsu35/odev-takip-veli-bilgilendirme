@@ -53,13 +53,18 @@ const App: React.FC = () => {
 
     try {
       const getApiUrl = () => {
-        // In development, we might want to target a specific URL
         if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL
 
-        // If on Vercel or same origin, use relative paths
         if (typeof window !== 'undefined') {
-          if (window.location.hostname === 'localhost') {
-            return 'http://localhost:4000'
+          const host = window.location.hostname
+          // If accessing via localhost or IP on port 3000, target port 4000
+          if (
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host.startsWith('192.168.') ||
+            host.startsWith('10.')
+          ) {
+            return `http://${host}:4000`
           }
           return '' // Relative path for production
         }
