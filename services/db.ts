@@ -27,6 +27,14 @@ export const db = {
           }
           return '' // Relative path for production
         }
+        const baseUrl = getApiUrl()
+        const res = await fetch(`${baseUrl}/api/state`)
+        if (!res.ok) throw new Error('API load failed')
+        const state = await res.json()
+        return {
+          students: state.students || [],
+          homeworks: state.homeworks || [],
+        }
       } catch (e) {
         console.error('API loadState failed:', e)
         // Throw the error so App.tsx knows the sync failed
