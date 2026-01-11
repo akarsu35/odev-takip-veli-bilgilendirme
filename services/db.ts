@@ -25,9 +25,17 @@ export const db = {
         })
 
         if (!res.ok) {
-          const errorText = await res.text().catch(() => 'No error body')
-          console.error(`db.loadState: API error ${res.status}`, errorText)
-          throw new Error(`Sunucu Hatası (${res.status}): Veriler yüklenemedi.`)
+          let errorMsg = `Sunucu Hatası (${res.status}): Veriler yüklenemedi.`
+          try {
+            const errorJson = await res.json()
+            if (errorJson.error) {
+              errorMsg = `Hata: ${errorJson.error}`
+            }
+          } catch (e) {
+            // Not JSON or other error parsing body
+          }
+          console.error(`db.loadState: API error ${res.status}`, errorMsg)
+          throw new Error(errorMsg)
         }
 
         const state = await res.json()

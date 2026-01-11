@@ -1,5 +1,3 @@
-import { prisma } from '../services/prisma'
-
 export default async function handler(req: any, res: any) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -12,19 +10,20 @@ export default async function handler(req: any, res: any) {
 
   // Check database configuration
   if (!process.env.DATABASE_URL) {
-    console.error(
-      'API Error: DATABASE_URL is not defined in environment variables.'
-    )
+    console.error('API Error: DATABASE_URL is not defined.')
     return res.status(500).json({
-      error: 'Veritabanı bağlantısı yapılandırılmamış. (DATABASE_URL eksik)',
-      _debug: { hasDbUrl: false },
+      error:
+        'Veritabanı bağlantısı yapılandırılmamış (DATABASE_URL eksik). Lütfen Vercel ayarlarından DATABASE_URL değişkenini kontrol edin.',
     })
   }
 
   if (req.method === 'GET') {
     try {
-      const students = await prisma.student.findMany()
-      const homeworks = await prisma.homework.findMany({
+      const { getPrisma } = await import('../services/prisma')
+      const p = getPrisma()
+
+      const students = await p.student.findMany()
+      const homeworks = await p.homework.findMany({
         include: { submissions: true },
       })
 
@@ -55,31 +54,26 @@ export default async function handler(req: any, res: any) {
           className: s.className,
         })),
         homeworks: convertedHomeworks,
-        _debug: {
-          hasDbUrl: !!process.env.DATABASE_URL,
-          dbUrlStart: process.env.DATABASE_URL
-            ? process.env.DATABASE_URL.substring(0, 15) + '...'
-            : 'NOT_SET',
-          nodeEnv: process.env.NODE_ENV,
-          studentCount: students.length,
-        },
       })
-    } catch (e) {
+    } catch (e: any) {
       console.error('GET /api/state failed', e)
-      return res.status(500).json({ error: 'Server error' })
+      return res.status(500).json({
+        error: `Veritabanı hatası: ${e.message || 'Veriler çekilemedi.'}`,
+      })
     }
   }
 
   if (req.method === 'POST') {
     try {
+      const { getPrisma } = await import('../services/prisma')
+      const p = getPrisma()
       const state = req.body
-      console.log('POST /api/state received')
 
       const students = state.students || []
       const studentIds = students.map((s: any) => s.id)
 
       for (const s of students) {
-        await prisma.student.upsert({
+        await p.student.upsert({
           where: { id: s.id },
           create: {
             id: s.id,
@@ -98,15 +92,15 @@ export default async function handler(req: any, res: any) {
       }
 
       if (studentIds.length > 0) {
-        await prisma.student.deleteMany({
+        await p.student.deleteMany({
           where: { id: { notIn: studentIds } },
         })
       } else {
-        await prisma.student.deleteMany()
+        await p.student.deleteMany()
       }
 
       for (const hw of state.homeworks || []) {
-        const upserted = await prisma.homework.upsert({
+        const upserted = await p.homework.upsert({
           where: { id: hw.id },
           create: {
             id: hw.id,
@@ -138,7 +132,7 @@ export default async function handler(req: any, res: any) {
 
         if (submissions.length > 0) {
           for (const sub of submissions) {
-            await prisma.submission.upsert({
+            await p.submission.upsert({
               where: {
                 studentId_homeworkId: {
                   studentId: sub.studentId,
@@ -153,7 +147,7 @@ export default async function handler(req: any, res: any) {
             })
           }
         } else {
-          await prisma.submission.deleteMany({
+          await p.submission.deleteMany({
             where: { homeworkId: upserted.id },
           })
         }
@@ -161,17 +155,19 @@ export default async function handler(req: any, res: any) {
 
       const homeworkIds = (state.homeworks || []).map((h: any) => h.id)
       if (homeworkIds.length > 0) {
-        await prisma.homework.deleteMany({
+        await p.homework.deleteMany({
           where: { id: { notIn: homeworkIds } },
         })
       } else {
-        await prisma.homework.deleteMany()
+        await p.homework.deleteMany()
       }
 
       return res.status(200).json({ ok: true })
-    } catch (e) {
+    } catch (e: any) {
       console.error('POST /api/state failed', e)
-      return res.status(500).json({ error: 'Server error' })
+      return res.status(500).json({
+        error: `Veritabanı hatası: ${e.message || 'Kayıt başarısız.'}`,
+      })
     }
   }
 

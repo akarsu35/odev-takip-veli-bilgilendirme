@@ -6,26 +6,24 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) {
-  console.warn('DATABASE_URL is not set in environment variables!')
-}
+let prismaClient: PrismaClient | undefined
 
-const pool = new pg.Pool({
-  connectionString: dbUrl,
-  ssl: dbUrl?.includes('supabase.co') ? { rejectUnauthorized: false } : false,
-})
+export const getPrisma = (): PrismaClient => {
+  if (globalForPrisma.prisma) return globalForPrisma.prisma
+  if (prismaClient) return prismaClient
 
-// Log pool errors to help debugging
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err)
-})
+  const dbUrl = process.env.DATABASE_URL
+  if (!dbUrl) {
+    throw new Error('DATABASE_URL is not defined in environment variables.')
+  }
 
-const adapter = new PrismaPg(pool)
+  const pool = new pg.Pool({
+    connectionString: dbUrl,
+    ssl: dbUrl.includes('supabase.co') ? { rejectUnauthorized: false } : false,
+  })
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
+  const adapter = new PrismaPg(pool)
+  prismaClient = new PrismaClient({
     adapter,
     log:
       process.env.NODE_ENV === 'development'
@@ -33,6 +31,10 @@ export const prisma =
         : ['error'],
   })
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+  if (process.env.NODE_ENV !== 'production')
+    globalForPrisma.prisma = prismaClient
+  return prismaClient
+}
 
+export const prisma = getPrisma() // Backward compatibility for existing imports
 export default prisma
