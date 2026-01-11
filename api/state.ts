@@ -1,3 +1,5 @@
+import getPrisma from '../services/prisma'
+
 export default async function handler(req: any, res: any) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -19,7 +21,6 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     try {
-      const { getPrisma } = await import('../services/prisma')
       const p = getPrisma()
 
       const students = await p.student.findMany()
@@ -65,7 +66,6 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'POST') {
     try {
-      const { getPrisma } = await import('../services/prisma')
       const p = getPrisma()
       const state = req.body
 

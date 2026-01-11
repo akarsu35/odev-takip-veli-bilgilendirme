@@ -52,7 +52,8 @@ export const db = {
     // If running server-side, or browser fallback, try direct Prisma
     if (typeof window === 'undefined') {
       try {
-        const { prisma } = await import('./prisma')
+        const getPrisma = (await import('./prisma')).default
+        const prisma = getPrisma()
         const [students, homeworks] = await Promise.all([
           prisma.student.findMany(),
           prisma.homework.findMany({ include: { submissions: true } }),
@@ -149,7 +150,8 @@ export const db = {
     } else {
       // server-side: write directly with Prisma
       try {
-        const { prisma } = await import('./prisma')
+        const getPrisma = (await import('./prisma')).default
+        const prisma = getPrisma()
         await prisma.$transaction(async (tx) => {
           await tx.submission.deleteMany()
           await tx.homework.deleteMany()

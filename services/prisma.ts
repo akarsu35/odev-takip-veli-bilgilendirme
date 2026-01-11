@@ -36,5 +36,4 @@ export const getPrisma = (): PrismaClient => {
   return prismaClient
 }
 
-export const prisma = getPrisma() // Backward compatibility for existing imports
-export default prisma
+export default getPrisma

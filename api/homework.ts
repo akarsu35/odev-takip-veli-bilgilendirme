@@ -1,4 +1,4 @@
-import { prisma } from '../services/prisma'
+import getPrisma from '../services/prisma'
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -15,6 +15,7 @@ export default async function handler(req: any, res: any) {
       if (!id) {
         return res.status(400).json({ error: 'Missing id' })
       }
+      const prisma = getPrisma()
       await prisma.homework.delete({ where: { id: id as string } })
       return res.status(200).json({ ok: true })
     } catch (e) {
