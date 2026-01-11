@@ -6,7 +6,21 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+const dbUrl = process.env.DATABASE_URL
+if (!dbUrl) {
+  console.warn('DATABASE_URL is not set in environment variables!')
+}
+
+const pool = new pg.Pool({
+  connectionString: dbUrl,
+  ssl: dbUrl?.includes('supabase.co') ? { rejectUnauthorized: false } : false,
+})
+
+// Log pool errors to help debugging
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err)
+})
+
 const adapter = new PrismaPg(pool)
 
 export const prisma =

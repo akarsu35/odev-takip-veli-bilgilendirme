@@ -16,8 +16,14 @@ export const db = {
         const getApiUrl = () => {
           if (process.env.REACT_APP_API_URL)
             return process.env.REACT_APP_API_URL
-          if (window.location.hostname === 'localhost') {
-            return 'http://localhost:4000'
+          const host = window.location.hostname
+          if (
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host.startsWith('192.168.') ||
+            host.startsWith('10.')
+          ) {
+            return `http://${host}:4000`
           }
           return '' // Relative path for production
         }
@@ -94,19 +100,39 @@ export const db = {
         const getApiUrl = () => {
           if (process.env.REACT_APP_API_URL)
             return process.env.REACT_APP_API_URL
-          if (window.location.hostname === 'localhost') {
-            return 'http://localhost:4000'
+          const host = window.location.hostname
+          if (
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host.startsWith('192.168.') ||
+            host.startsWith('10.')
+          ) {
+            return `http://${host}:4000`
           }
           return '' // Relative path for production
         }
         const baseUrl = getApiUrl()
-        await fetch(`${baseUrl}/api/state`, {
+        const res = await fetch(`${baseUrl}/api/state`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state),
         })
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(
+            errorData.error || `Server responded with ${res.status}`
+          )
+        }
+        console.log('db.saveState: success')
       } catch (e) {
         console.error('Remote sync failed:', e)
+        // Only alert if we're not just failing to find the local server during dev
+        if (
+          typeof window !== 'undefined' &&
+          window.location.hostname !== 'localhost'
+        ) {
+          // Maybe don't spam alert, but log is good.
+        }
       }
     } else {
       // server-side: write directly with Prisma
