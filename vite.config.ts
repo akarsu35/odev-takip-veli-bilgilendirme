@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.REACT_APP_API_URL': JSON.stringify('http://localhost:4000'),
+      'process.env.REACT_APP_API_URL': JSON.stringify(env.REACT_APP_API_URL),
     },
     resolve: {
       alias: {

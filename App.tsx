@@ -52,7 +52,20 @@ const App: React.FC = () => {
     setStudents((prev) => prev.filter((s) => s.id !== id))
 
     try {
-      const api = process.env.REACT_APP_API_URL || 'http://localhost:4000'
+      const getApiUrl = () => {
+        // In development, we might want to target a specific URL
+        if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL
+
+        // If on Vercel or same origin, use relative paths
+        if (typeof window !== 'undefined') {
+          if (window.location.hostname === 'localhost') {
+            return 'http://localhost:4000'
+          }
+          return '' // Relative path for production
+        }
+        return 'http://localhost:4000'
+      }
+      const api = getApiUrl()
       const res = await fetch(
         `${api}/api/student?id=${encodeURIComponent(id)}`,
         { method: 'DELETE' }

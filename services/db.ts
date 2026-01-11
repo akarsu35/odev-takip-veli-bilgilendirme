@@ -13,7 +13,15 @@ export const db = {
     // localStorage.
     if (typeof window !== 'undefined') {
       try {
-        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000'
+        const getApiUrl = () => {
+          if (process.env.REACT_APP_API_URL)
+            return process.env.REACT_APP_API_URL
+          if (window.location.hostname === 'localhost') {
+            return 'http://localhost:4000'
+          }
+          return '' // Relative path for production
+        }
+        const baseUrl = getApiUrl()
         const res = await fetch(`${baseUrl}/api/state`)
         if (res.ok) return await res.json()
       } catch (e) {
@@ -83,7 +91,15 @@ export const db = {
         homeworks: state.homeworks?.length,
       })
       try {
-        const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:4000'
+        const getApiUrl = () => {
+          if (process.env.REACT_APP_API_URL)
+            return process.env.REACT_APP_API_URL
+          if (window.location.hostname === 'localhost') {
+            return 'http://localhost:4000'
+          }
+          return '' // Relative path for production
+        }
+        const baseUrl = getApiUrl()
         await fetch(`${baseUrl}/api/state`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
