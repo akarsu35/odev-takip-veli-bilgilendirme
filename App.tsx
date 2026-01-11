@@ -7,6 +7,7 @@ import CheckPanel from './components/CheckPanel'
 import Settings from './components/Settings'
 import StudentHistory from '@/components/StudentHistory'
 import { db } from './services/db'
+import { getApiUrl } from './services/api-utils'
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -73,27 +74,9 @@ const App: React.FC = () => {
     setStudents((prev) => prev.filter((s) => s.id !== id))
 
     try {
-      const getApiUrl = () => {
-        if (process.env.REACT_APP_API_URL) return process.env.REACT_APP_API_URL
-
-        if (typeof window !== 'undefined') {
-          const host = window.location.hostname
-          // If accessing via localhost or IP on port 3000, target port 4000
-          if (
-            host === 'localhost' ||
-            host === '127.0.0.1' ||
-            host.startsWith('192.168.') ||
-            host.startsWith('10.')
-          ) {
-            return `http://${host}:4000`
-          }
-          return '' // Relative path for production
-        }
-        return 'http://localhost:4000'
-      }
-      const api = getApiUrl()
+      const baseUrl = getApiUrl()
       const res = await fetch(
-        `${api}/api/student?id=${encodeURIComponent(id)}`,
+        `${baseUrl}/api/student?id=${encodeURIComponent(id)}`,
         { method: 'DELETE' }
       )
       if (!res.ok) throw new Error('Silme işlemi başarısız')

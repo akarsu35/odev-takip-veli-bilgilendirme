@@ -10,6 +10,17 @@ export default async function handler(req: any, res: any) {
     return res.status(204).end()
   }
 
+  // Check database configuration
+  if (!process.env.DATABASE_URL) {
+    console.error(
+      'API Error: DATABASE_URL is not defined in environment variables.'
+    )
+    return res.status(500).json({
+      error: 'Veritabanı bağlantısı yapılandırılmamış. (DATABASE_URL eksik)',
+      _debug: { hasDbUrl: false },
+    })
+  }
+
   if (req.method === 'GET') {
     try {
       const students = await prisma.student.findMany()

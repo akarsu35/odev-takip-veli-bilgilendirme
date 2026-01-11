@@ -1,4 +1,5 @@
 import { Student, Homework, AppState, HomeworkStatus } from '../types'
+import { getApiUrl } from './api-utils'
 
 const STORAGE_KEY = 'odev_takip_v2'
 
@@ -13,31 +14,29 @@ export const db = {
     // localStorage.
     if (typeof window !== 'undefined') {
       try {
-        const getApiUrl = () => {
-          if (process.env.REACT_APP_API_URL)
-            return process.env.REACT_APP_API_URL
-          const host = window.location.hostname
-          if (
-            host === 'localhost' ||
-            host === '127.0.0.1' ||
-            host.startsWith('192.168.') ||
-            host.startsWith('10.')
-          ) {
-            return `http://${host}:4000`
-          }
-          return '' // Relative path for production
-        }
         const baseUrl = getApiUrl()
-        const res = await fetch(`${baseUrl}/api/state`)
-        if (!res.ok) throw new Error('API load failed')
+        console.log(`db.loadState: fetching from ${baseUrl}/api/state`)
+
+        const res = await fetch(`${baseUrl}/api/state`).catch((err) => {
+          console.error('db.loadState: fetch network error', err)
+          throw new Error(
+            'Ağ hatası: Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.'
+          )
+        })
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => 'No error body')
+          console.error(`db.loadState: API error ${res.status}`, errorText)
+          throw new Error(`Sunucu Hatası (${res.status}): Veriler yüklenemedi.`)
+        }
+
         const state = await res.json()
         return {
           students: state.students || [],
           homeworks: state.homeworks || [],
         }
       } catch (e) {
-        console.error('API loadState failed:', e)
-        // Throw the error so App.tsx knows the sync failed
+        console.error('db.loadState: process failed', e)
         throw e
       }
     }
@@ -123,8 +122,9 @@ export const db = {
         })
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}))
+          console.error(`db.saveState: API error ${res.status}`, errorData)
           throw new Error(
-            errorData.error || `Server responded with ${res.status}`
+            errorData.error || `Sunucu Hatası (${res.status}): Kayıt başarısız.`
           )
         }
         console.log('db.saveState: success')
