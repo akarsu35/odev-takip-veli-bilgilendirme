@@ -50,6 +50,7 @@ export default async function handler(req: any, res: any) {
             ? process.env.DATABASE_URL.substring(0, 15) + '...'
             : 'NOT_SET',
           nodeEnv: process.env.NODE_ENV,
+          studentCount: students.length,
         },
       })
     } catch (e) {

@@ -27,14 +27,10 @@ export const db = {
           }
           return '' // Relative path for production
         }
-        const baseUrl = getApiUrl()
-        const res = await fetch(`${baseUrl}/api/state`)
-        if (res.ok) return await res.json()
       } catch (e) {
-        console.warn(
-          'Failed to load state from local server, falling back to localStorage',
-          e
-        )
+        console.error('API loadState failed:', e)
+        // Throw the error so App.tsx knows the sync failed
+        throw e
       }
     }
 

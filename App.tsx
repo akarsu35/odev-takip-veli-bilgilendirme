@@ -18,32 +18,53 @@ const App: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([])
   const [homeworks, setHomeworks] = useState<Homework[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncFailed, setSyncFailed] = useState(false)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     const init = async () => {
-      const state = await db.loadState()
+      try {
+        const state = await db.loadState()
 
-      // Migration: Convert targetClass to targetClasses
-      const migratedHomeworks = (state.homeworks || []).map((hw: any) => {
-        if (hw.targetClass && !hw.targetClasses) {
-          const { targetClass, ...rest } = hw
-          return { ...rest, targetClasses: [targetClass] }
+        // Migration: Convert targetClass to targetClasses
+        const migratedHomeworks = (state.homeworks || []).map((hw: any) => {
+          if (hw.targetClass && !hw.targetClasses) {
+            const { targetClass, ...rest } = hw
+            return { ...rest, targetClasses: [targetClass] }
+          }
+          return hw
+        })
+
+        setStudents(state.students || [])
+        setHomeworks(migratedHomeworks)
+        setIsInitialized(true)
+      } catch (e) {
+        console.error('Initialization failed', e)
+        setSyncFailed(true)
+        // Fallback to localStorage if API fails, but don't mark as "initialized for save"
+        // unless we want to allow offline mode to eventually overwrite?
+        // For now, let's keep it safe.
+        const localData = localStorage.getItem('odev_takip_v2')
+        if (localData) {
+          const parsed = JSON.parse(localData)
+          setStudents(parsed.students || [])
+          setHomeworks(parsed.homeworks || [])
         }
-        return hw
-      })
-
-      setStudents(state.students || [])
-      setHomeworks(migratedHomeworks)
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
     init()
   }, [])
 
   useEffect(() => {
-    if (!loading) {
-      db.saveState({ students, homeworks })
+    if (!loading && isInitialized && !syncFailed) {
+      db.saveState({ students, homeworks }).catch((e) => {
+        console.error('Auto-save failed', e)
+        // We don't toast on every auto-save to avoid spam
+      })
     }
-  }, [students, homeworks, loading])
+  }, [students, homeworks, loading, isInitialized, syncFailed])
 
   const addStudent = (s: Student) => setStudents((prev) => [...prev, s])
   const deleteStudent = async (id: string) => {
@@ -176,10 +197,21 @@ const App: React.FC = () => {
             ÖDEV TAKİP
           </h1>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              BULUT DB
-            </span>
+            {syncFailed ? (
+              <>
+                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                  BAĞLANTI HATASI
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  BULUT DB
+                </span>
+              </>
+            )}
           </div>
         </div>
       </header>
