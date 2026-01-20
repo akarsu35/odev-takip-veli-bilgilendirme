@@ -11,11 +11,12 @@ export default async function handler(req: any, res: any) {
   }
 
   // Check database configuration
-  if (!process.env.DATABASE_URL) {
-    console.error('API Error: DATABASE_URL is not defined.')
+  const hasUrl = process.env.DATABASE_URL || process.env.DIRECT_URL
+  if (!hasUrl) {
+    console.error('API Error: Neither DATABASE_URL nor DIRECT_URL is defined.')
     return res.status(500).json({
       error:
-        'Veritabanı bağlantısı yapılandırılmamış (DATABASE_URL eksik). Lütfen Vercel ayarlarından DATABASE_URL değişkenini kontrol edin.',
+        'Veritabanı bağlantısı yapılandırılmamış (DATABASE_URL veya DIRECT_URL eksik). Lütfen Vercel ayarlarından değişkenleri kontrol edin.',
     })
   }
 
@@ -65,7 +66,15 @@ export default async function handler(req: any, res: any) {
       console.error('GET /api/state failed:', e)
       return res.status(500).json({
         error: `Veritabanı hatası: ${e.message || 'Veriler çekilemedi.'}`,
-        details: process.env.NODE_ENV === 'development' ? e.stack : undefined,
+        details: e.stack,
+        env_check: {
+          has_db_url: !!process.env.DATABASE_URL,
+          has_direct_url: !!process.env.DIRECT_URL,
+          node_env: process.env.NODE_ENV,
+          db_url_start: process.env.DATABASE_URL
+            ? process.env.DATABASE_URL.substring(0, 15)
+            : 'none',
+        },
       })
     }
   }
