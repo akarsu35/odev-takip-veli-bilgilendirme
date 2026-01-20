@@ -5,9 +5,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") 
+  directUrl = env("DIRECT_URL")
 }
-
 
 model Student {
   id          String       @id @default(uuid())
@@ -18,7 +17,7 @@ model Student {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   submissions Submission[]
-  Homework    Homework[]   @relation("HomeworkStudents")
+  homeworks   Homework[]   @relation("HomeworkStudents")
 }
 
 model Homework {
@@ -32,7 +31,7 @@ model Homework {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   submissions    Submission[]
-  Student        Student[]    @relation("HomeworkStudents")
+  students       Student[]    @relation("HomeworkStudents")
 }
 
 model Submission {

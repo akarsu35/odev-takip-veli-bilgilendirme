@@ -49,7 +49,6 @@ export const db = {
       }
     }
 
-    // If running server-side, or browser fallback, try direct Prisma
     if (typeof window === 'undefined') {
       try {
         const getPrisma = (await import('./prisma')).default
@@ -68,11 +67,11 @@ export const db = {
             dueDate: hw.dueDate.toISOString(),
             targetClasses: hw.targetClasses,
             targetStudentIds: hw.targetStudents,
-            submissions: hw.submissions.reduce((acc, sub) => {
+            submissions: hw.submissions.reduce((acc: any, sub: any) => {
               acc[sub.studentId] = sub.status as HomeworkStatus
               return acc
             }, {} as Record<string, HomeworkStatus>),
-            notifiedStudents: hw.submissions.reduce((acc, sub) => {
+            notifiedStudents: hw.submissions.reduce((acc: any, sub: any) => {
               if (sub.isNotified) acc[sub.studentId] = true
               return acc
             }, {} as Record<string, boolean>),
