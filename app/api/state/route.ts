@@ -104,6 +104,11 @@ export async function POST(req: Request) {
           },
         })
 
+        // Clear existing submissions for this homework before recreating (cleaner and often faster than single upserts)
+        await tx.submission.deleteMany({
+          where: { homeworkId: upserted.id },
+        })
+
         const submissions = Object.entries(hw.submissions || {}).map(
           ([studentId, status]) => ({
             studentId,
@@ -114,24 +119,8 @@ export async function POST(req: Request) {
         )
 
         if (submissions.length > 0) {
-          for (const sub of submissions) {
-            await tx.submission.upsert({
-              where: {
-                studentId_homeworkId: {
-                  studentId: sub.studentId,
-                  homeworkId: sub.homeworkId,
-                },
-              },
-              create: sub,
-              update: {
-                status: sub.status,
-                isNotified: sub.isNotified,
-              },
-            })
-          }
-        } else {
-          await tx.submission.deleteMany({
-            where: { homeworkId: upserted.id },
+          await tx.submission.createMany({
+            data: submissions,
           })
         }
       }

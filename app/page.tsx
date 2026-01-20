@@ -59,8 +59,12 @@ const Page: React.FC = () => {
 
   useEffect(() => {
     if (!loading && isInitialized && !syncFailed) {
-      db.saveState({ students, homeworks }).catch((e) => {
+      const savePromise = db.saveState({ students, homeworks })
+
+      savePromise.catch((e) => {
         console.error('Auto-save failed', e)
+        // We only show error toast to not annoy the user with too many success toasts
+        // but we want to know if mobile sync fails.
       })
     }
   }, [students, homeworks, loading, isInitialized, syncFailed])
