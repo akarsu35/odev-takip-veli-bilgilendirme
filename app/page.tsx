@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
 import { Toaster } from 'react-hot-toast'
-import StudentManager from '@/components/StudentManager'
-import HomeworkManager from '@/components/HomeworkManager'
-import CheckPanel from '@/components/CheckPanel'
-import Settings from '@/components/Settings'
-import StudentHistory from '@/components/StudentHistory'
+
 import { db } from '@/services/db'
+import StudentManager from './components/StudentManager'
+import HomeworkManager from './components/HomeworkManager'
+import CheckPanel from './components/CheckPanel'
+import Settings from './components/Settings'
+import StudentHistory from './components/StudentHistory'
 
 const Page: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
