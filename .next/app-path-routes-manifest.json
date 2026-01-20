@@ -1,7 +1,7 @@
 {
+  "/api/ai/route": "/api/ai",
   "/api/state/route": "/api/state",
   "/_not-found/page": "/_not-found",
-  "/api/ai/route": "/api/ai",
   "/api/student/route": "/api/student",
   "/page": "/"
 }

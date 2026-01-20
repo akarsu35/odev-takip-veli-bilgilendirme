@@ -53,87 +53,98 @@ export async function POST(req: Request) {
     const students = state.students || []
     const studentIds = students.map((s: any) => s.id)
 
-    // Transaction for atomic update
-    await p.$transaction(async (tx) => {
-      for (const s of students) {
-        await tx.student.upsert({
-          where: { id: s.id },
-          create: {
-            id: s.id,
-            name: s.name,
-            parentName: s.parentName,
-            parentPhone: s.parentPhone,
-            className: s.className,
-          },
-          update: {
-            name: s.name,
-            parentName: s.parentName,
-            parentPhone: s.parentPhone,
-            className: s.className,
-          },
-        })
-      }
-
-      if (studentIds.length > 0) {
-        await tx.student.deleteMany({
-          where: { id: { notIn: studentIds } },
-        })
-      } else {
-        await tx.student.deleteMany()
-      }
-
-      for (const hw of state.homeworks || []) {
-        const upserted = await tx.homework.upsert({
-          where: { id: hw.id },
-          create: {
-            id: hw.id,
-            title: hw.title,
-            description: hw.description,
-            assignedDate: new Date(hw.assignedDate),
-            dueDate: new Date(hw.dueDate),
-            targetClasses: hw.targetClasses || [],
-            targetStudents: hw.targetStudentIds || [],
-          },
-          update: {
-            title: hw.title,
-            description: hw.description,
-            assignedDate: new Date(hw.assignedDate),
-            dueDate: new Date(hw.dueDate),
-            targetClasses: hw.targetClasses || [],
-            targetStudents: hw.targetStudentIds || [],
-          },
-        })
-
-        // Clear existing submissions for this homework before recreating (cleaner and often faster than single upserts)
-        await tx.submission.deleteMany({
-          where: { homeworkId: upserted.id },
-        })
-
-        const submissions = Object.entries(hw.submissions || {}).map(
-          ([studentId, status]) => ({
-            studentId,
-            homeworkId: upserted.id,
-            status: status as string,
-            isNotified: hw.notifiedStudents?.[studentId] || false,
-          }),
+    // Transaction for atomic update with extended timeout
+    await p.$transaction(
+      async (tx) => {
+        // Parallelize student upserts
+        await Promise.all(
+          students.map((s: any) =>
+            tx.student.upsert({
+              where: { id: s.id },
+              create: {
+                id: s.id,
+                name: s.name,
+                parentName: s.parentName,
+                parentPhone: s.parentPhone,
+                className: s.className,
+              },
+              update: {
+                name: s.name,
+                parentName: s.parentName,
+                parentPhone: s.parentPhone,
+                className: s.className,
+              },
+            }),
+          ),
         )
 
-        if (submissions.length > 0) {
-          await tx.submission.createMany({
-            data: submissions,
+        if (studentIds.length > 0) {
+          await tx.student.deleteMany({
+            where: { id: { notIn: studentIds } },
           })
+        } else {
+          await tx.student.deleteMany()
         }
-      }
 
-      const homeworkIds = (state.homeworks || []).map((h: any) => h.id)
-      if (homeworkIds.length > 0) {
-        await tx.homework.deleteMany({
-          where: { id: { notIn: homeworkIds } },
-        })
-      } else {
-        await tx.homework.deleteMany()
-      }
-    })
+        // We process homeworks one by one because they have dependent createMany operations
+        // but we could parallelize them too if needed. For now, let's keep it sequential
+        // as it's usually a small number of homeworks compared to students/submissions.
+        for (const hw of state.homeworks || []) {
+          const upserted = await tx.homework.upsert({
+            where: { id: hw.id },
+            create: {
+              id: hw.id,
+              title: hw.title,
+              description: hw.description,
+              assignedDate: new Date(hw.assignedDate),
+              dueDate: new Date(hw.dueDate),
+              targetClasses: hw.targetClasses || [],
+              targetStudents: hw.targetStudentIds || [],
+            },
+            update: {
+              title: hw.title,
+              description: hw.description,
+              assignedDate: new Date(hw.assignedDate),
+              dueDate: new Date(hw.dueDate),
+              targetClasses: hw.targetClasses || [],
+              targetStudents: hw.targetStudentIds || [],
+            },
+          })
+
+          // Clear existing submissions for this homework before recreating
+          await tx.submission.deleteMany({
+            where: { homeworkId: upserted.id },
+          })
+
+          const submissions = Object.entries(hw.submissions || {}).map(
+            ([studentId, status]) => ({
+              studentId,
+              homeworkId: upserted.id,
+              status: status as string,
+              isNotified: hw.notifiedStudents?.[studentId] || false,
+            }),
+          )
+
+          if (submissions.length > 0) {
+            await tx.submission.createMany({
+              data: submissions,
+            })
+          }
+        }
+
+        const homeworkIds = (state.homeworks || []).map((h: any) => h.id)
+        if (homeworkIds.length > 0) {
+          await tx.homework.deleteMany({
+            where: { id: { notIn: homeworkIds } },
+          })
+        } else {
+          await tx.homework.deleteMany()
+        }
+      },
+      {
+        timeout: 30000, // 30 seconds timeout
+      },
+    )
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {
