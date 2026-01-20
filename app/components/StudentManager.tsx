@@ -1,6 +1,8 @@
+'use client'
+
 import React, { useState } from 'react'
-import { Student } from '../types'
-import { db } from '../services/db'
+import { Student } from '@/types'
+import { db } from '@/services/db'
 import { read, utils } from 'xlsx'
 import toast from 'react-hot-toast'
 
@@ -28,7 +30,7 @@ const StudentManager: React.FC<Props> = ({
 
   // Get unique existing classes for auto-suggestion
   const existingClasses = Array.from(
-    new Set(students.map((s) => s.className))
+    new Set(students.map((s) => s.className)),
   ).sort()
 
   const handleEdit = (student: Student) => {
@@ -283,12 +285,12 @@ const StudentManager: React.FC<Props> = ({
                   s.className
                     .toLowerCase()
                     .includes(searchTerm.toLowerCase()) ||
-                  s.parentName.toLowerCase().includes(searchTerm.toLowerCase())
+                  s.parentName.toLowerCase().includes(searchTerm.toLowerCase()),
               )
               .sort(
                 (a, b) =>
                   a.className.localeCompare(b.className) ||
-                  a.name.localeCompare(b.name)
+                  a.name.localeCompare(b.name),
               )
               .map((s) => (
                 <div
@@ -326,7 +328,7 @@ const StudentManager: React.FC<Props> = ({
                       onClick={() => {
                         if (
                           window.confirm(
-                            'Bu öğrenciyi silmek istediğinize emin misiniz?'
+                            'Bu öğrenciyi silmek istediğinize emin misiniz?',
                           )
                         ) {
                           onDelete(s.id)

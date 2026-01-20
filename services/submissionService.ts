@@ -1,6 +1,6 @@
-import prismaDefault from './prisma'
+import prisma from './prisma'
 import type { PrismaClient } from '@prisma/client'
-import { HomeworkStatus } from '../types'
+import { HomeworkStatus } from '@/types'
 
 type CreateSubmissionInput = {
   studentId: string
@@ -11,21 +11,18 @@ type CreateSubmissionInput = {
 
 export async function createSubmission(
   data: CreateSubmissionInput,
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   return db.submission.create({ data })
 }
 
-export async function getSubmissionById(
-  id: string,
-  db: PrismaClient = prismaDefault
-) {
+export async function getSubmissionById(id: string, db: PrismaClient = prisma) {
   return db.submission.findUnique({ where: { id } })
 }
 
 export async function getSubmissions(
   filter?: { studentId?: string; homeworkId?: string },
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   const where: any = {}
   if (filter?.studentId) where.studentId = filter.studentId
@@ -36,15 +33,12 @@ export async function getSubmissions(
 export async function updateSubmission(
   id: string,
   data: Partial<{ status: HomeworkStatus; isNotified: boolean }>,
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   return db.submission.update({ where: { id }, data })
 }
 
-export async function deleteSubmission(
-  id: string,
-  db: PrismaClient = prismaDefault
-) {
+export async function deleteSubmission(id: string, db: PrismaClient = prisma) {
   return db.submission.delete({ where: { id } })
 }
 

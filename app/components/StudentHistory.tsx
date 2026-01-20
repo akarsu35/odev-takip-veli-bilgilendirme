@@ -1,5 +1,7 @@
+'use client'
+
 import React, { useState, useMemo } from 'react'
-import { Student, Homework, HomeworkStatus } from '../types'
+import { Student, Homework, HomeworkStatus } from '@/types'
 
 interface Props {
   students: Student[]
@@ -13,17 +15,17 @@ const StudentHistory: React.FC<Props> = ({
   initialStudentId,
 }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
-    initialStudentId || ''
+    initialStudentId || '',
   )
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<HomeworkStatus | 'ALL'>(
-    'ALL'
+    'ALL',
   )
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date')
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === selectedStudentId),
-    [students, selectedStudentId]
+    [students, selectedStudentId],
   )
 
   const filteredStudents = useMemo(() => {
@@ -31,7 +33,7 @@ const StudentHistory: React.FC<Props> = ({
       .filter(
         (s) =>
           s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.className.toLowerCase().includes(searchTerm.toLowerCase())
+          s.className.toLowerCase().includes(searchTerm.toLowerCase()),
       )
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [students, searchTerm])
@@ -83,7 +85,7 @@ const StudentHistory: React.FC<Props> = ({
   const stats = useMemo(() => {
     if (processedHomeworks.length === 0) return null
     const done = processedHomeworks.filter(
-      (h) => h.studentStatus === HomeworkStatus.DONE
+      (h) => h.studentStatus === HomeworkStatus.DONE,
     ).length
     return {
       total: processedHomeworks.length,
@@ -204,7 +206,7 @@ const StudentHistory: React.FC<Props> = ({
                 color="bg-emerald-500"
                 count={
                   processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.DONE
+                    (h) => h.studentStatus === HomeworkStatus.DONE,
                   ).length
                 }
               />
@@ -215,7 +217,7 @@ const StudentHistory: React.FC<Props> = ({
                 color="bg-red-500"
                 count={
                   processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.MISSING
+                    (h) => h.studentStatus === HomeworkStatus.MISSING,
                   ).length
                 }
               />
@@ -226,7 +228,7 @@ const StudentHistory: React.FC<Props> = ({
                 color="bg-orange-500"
                 count={
                   processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.INCOMPLETE
+                    (h) => h.studentStatus === HomeworkStatus.INCOMPLETE,
                   ).length
                 }
               />
@@ -237,7 +239,7 @@ const StudentHistory: React.FC<Props> = ({
                 color="bg-slate-400"
                 count={
                   processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.PENDING
+                    (h) => h.studentStatus === HomeworkStatus.PENDING,
                   ).length
                 }
               />

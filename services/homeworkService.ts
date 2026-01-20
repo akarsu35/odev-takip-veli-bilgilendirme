@@ -1,4 +1,4 @@
-import prismaDefault from './prisma'
+import prisma from './prisma'
 import type { PrismaClient } from '@prisma/client'
 
 type CreateHomeworkInput = {
@@ -12,21 +12,18 @@ type CreateHomeworkInput = {
 
 export async function createHomework(
   data: CreateHomeworkInput,
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   return db.homework.create({ data })
 }
 
-export async function getHomeworkById(
-  id: string,
-  db: PrismaClient = prismaDefault
-) {
+export async function getHomeworkById(id: string, db: PrismaClient = prisma) {
   return db.homework.findUnique({ where: { id } })
 }
 
 export async function getHomeworks(
   filter?: { className?: string },
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   const where = filter?.className
     ? { targetClasses: { has: filter.className } }
@@ -37,15 +34,12 @@ export async function getHomeworks(
 export async function updateHomework(
   id: string,
   data: Partial<CreateHomeworkInput>,
-  db: PrismaClient = prismaDefault
+  db: PrismaClient = prisma,
 ) {
   return db.homework.update({ where: { id }, data })
 }
 
-export async function deleteHomework(
-  id: string,
-  db: PrismaClient = prismaDefault
-) {
+export async function deleteHomework(id: string, db: PrismaClient = prisma) {
   return db.homework.delete({ where: { id } })
 }
 

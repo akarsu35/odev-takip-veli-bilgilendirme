@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { Student, Homework, HomeworkStatus } from '../types'
-import { generateParentMessage } from '../services/geminiService'
+'use client'
+
+import React, { useEffect, useState } from 'react'
+import { Student, Homework, HomeworkStatus } from '@/types'
+import { generateParentMessage } from '@/services/geminiService'
 
 interface Props {
   students: Student[]
@@ -8,7 +10,7 @@ interface Props {
   onUpdateStatus: (
     hwId: string,
     studentId: string,
-    status: HomeworkStatus
+    status: HomeworkStatus,
   ) => void
   onMarkNotified: (hwId: string, studentId: string) => void
 }
@@ -28,7 +30,7 @@ const CheckPanel: React.FC<Props> = ({
   // Reset selected homework when class changes
   useEffect(() => {
     const classHws = homeworks.filter((h) =>
-      h.targetClasses?.includes(selectedClass)
+      h.targetClasses?.includes(selectedClass),
     )
     if (classHws.length > 0) {
       setSelectedHwId(classHws[0].id)
@@ -45,7 +47,7 @@ const CheckPanel: React.FC<Props> = ({
   }, [classes, selectedClass])
 
   const filteredHomeworks = homeworks.filter((h) =>
-    h.targetClasses?.includes(selectedClass)
+    h.targetClasses?.includes(selectedClass),
   )
   const selectedHw = homeworks.find((h) => h.id === selectedHwId)
 
@@ -66,7 +68,7 @@ const CheckPanel: React.FC<Props> = ({
 
   const handleSendWhatsApp = async (
     student: Student,
-    status: HomeworkStatus
+    status: HomeworkStatus,
   ) => {
     if (!selectedHw) return
 
@@ -74,7 +76,7 @@ const CheckPanel: React.FC<Props> = ({
     const message = await generateParentMessage(
       student.name,
       selectedHw.title,
-      status
+      status,
     )
     setIsLoading(null)
 
@@ -207,8 +209,8 @@ const CheckPanel: React.FC<Props> = ({
                       {isLoading === student.id
                         ? '...'
                         : isNotified
-                        ? 'BİLDİRİLDİ'
-                        : 'BİLDİR'}
+                          ? 'BİLDİRİLDİ'
+                          : 'BİLDİR'}
                     </button>
                   )}
                 </div>
@@ -223,7 +225,7 @@ const CheckPanel: React.FC<Props> = ({
                       onUpdateStatus(
                         selectedHwId,
                         student.id,
-                        HomeworkStatus.DONE
+                        HomeworkStatus.DONE,
                       )
                     }
                   />
@@ -236,7 +238,7 @@ const CheckPanel: React.FC<Props> = ({
                       onUpdateStatus(
                         selectedHwId,
                         student.id,
-                        HomeworkStatus.MISSING
+                        HomeworkStatus.MISSING,
                       )
                     }
                   />
@@ -249,7 +251,7 @@ const CheckPanel: React.FC<Props> = ({
                       onUpdateStatus(
                         selectedHwId,
                         student.id,
-                        HomeworkStatus.INCOMPLETE
+                        HomeworkStatus.INCOMPLETE,
                       )
                     }
                   />

@@ -1,6 +1,8 @@
+'use client'
+
 import React, { useState, useMemo } from 'react'
-import { Homework, Student, HomeworkStatus } from '../types'
-import { suggestHomeworkDescription } from '../services/geminiService'
+import { Homework, Student, HomeworkStatus } from '@/types'
+import { suggestHomeworkDescription } from '@/services/geminiService'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -12,7 +14,7 @@ interface Props {
   onUpdateStatus: (
     hwId: string,
     studentId: string,
-    status: HomeworkStatus
+    status: HomeworkStatus,
   ) => void
 }
 
@@ -33,17 +35,17 @@ const HomeworkManager: React.FC<Props> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [analyzingHomeworkId, setAnalyzingHomeworkId] = useState<string | null>(
-    null
+    null,
   )
   const analyzingHomework = useMemo(
     () => homeworks.find((h) => h.id === analyzingHomeworkId) || null,
-    [homeworks, analyzingHomeworkId]
+    [homeworks, analyzingHomeworkId],
   )
   const [analysisFilter, setAnalysisFilter] = useState<string>('ALL')
 
   const existingClasses = useMemo(
     () => Array.from(new Set(students.map((s) => s.className))).sort(),
-    [students]
+    [students],
   )
 
   const handleSuggest = async () => {
@@ -82,13 +84,13 @@ const HomeworkManager: React.FC<Props> = ({
     setTargetClasses((prev) =>
       prev.includes(className)
         ? prev.filter((c) => c !== className)
-        : [...prev, className]
+        : [...prev, className],
     )
   }
 
   const toggleStudent = (id: string) => {
     setTargetStudentIds((prev) =>
-      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id],
     )
   }
 
@@ -97,7 +99,7 @@ const HomeworkManager: React.FC<Props> = ({
       students
         .filter((s) => targetClasses.includes(s.className))
         .sort((a, b) => a.name.localeCompare(b.name)),
-    [students, targetClasses]
+    [students, targetClasses],
   )
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -165,13 +167,14 @@ const HomeworkManager: React.FC<Props> = ({
     const stats = {
       total: relevantStudents.length,
       done: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.DONE
+        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.DONE,
       ).length,
       missing: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.MISSING
+        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.MISSING,
       ).length,
       incomplete: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.INCOMPLETE
+        (s) =>
+          analyzingHomework.submissions[s.id] === HomeworkStatus.INCOMPLETE,
       ).length,
     }
 
@@ -236,7 +239,7 @@ const HomeworkManager: React.FC<Props> = ({
                 >
                   {filter === 'ALL' ? 'Tümü' : filter}
                 </button>
-              )
+              ),
             )}
           </div>
 
@@ -264,7 +267,7 @@ const HomeworkManager: React.FC<Props> = ({
                         onUpdateStatus(
                           analyzingHomework.id,
                           student.id,
-                          HomeworkStatus.DONE
+                          HomeworkStatus.DONE,
                         )
                       }
                       className={`p-2 rounded-full ${
@@ -281,7 +284,7 @@ const HomeworkManager: React.FC<Props> = ({
                         onUpdateStatus(
                           analyzingHomework.id,
                           student.id,
-                          HomeworkStatus.MISSING
+                          HomeworkStatus.MISSING,
                         )
                       }
                       className={`p-2 rounded-full ${
@@ -298,7 +301,7 @@ const HomeworkManager: React.FC<Props> = ({
                         onUpdateStatus(
                           analyzingHomework.id,
                           student.id,
-                          HomeworkStatus.INCOMPLETE
+                          HomeworkStatus.INCOMPLETE,
                         )
                       }
                       className={`p-2 rounded-full ${
@@ -316,7 +319,7 @@ const HomeworkManager: React.FC<Props> = ({
                           onUpdateStatus(
                             analyzingHomework.id,
                             student.id,
-                            HomeworkStatus.PENDING
+                            HomeworkStatus.PENDING,
                           )
                         }
                         className="p-2 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200"
@@ -557,7 +560,7 @@ const HomeworkManager: React.FC<Props> = ({
                       onClick={() => {
                         if (
                           window.confirm(
-                            'Bu ödevi silmek istediğinize emin misiniz?'
+                            'Bu ödevi silmek istediğinize emin misiniz?',
                           )
                         ) {
                           onDelete(h.id)
