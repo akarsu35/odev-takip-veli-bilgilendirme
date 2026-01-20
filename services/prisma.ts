@@ -8,46 +8,50 @@ const globalForPrisma = globalThis as unknown as {
 
 let prisma: PrismaClient
 
-const dbUrl = process.env.DATABASE_URL
-if (!dbUrl) {
-  console.error(
-    'CRITICAL: DATABASE_URL is not defined in environment variables.',
-  )
-}
+const getDbUrl = () => process.env.DATABASE_URL || process.env.DIRECT_URL
 
 if (!globalForPrisma.prisma) {
-  try {
-    const isSupabase =
-      dbUrl?.includes('supabase.co') || dbUrl?.includes('supabase.com')
-    const pool = new pg.Pool({
-      connectionString: dbUrl,
-      ssl: isSupabase ? { rejectUnauthorized: false } : false,
-      max: 1, // Minimize connections per lambda instance
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
-    })
+  const dbUrl = getDbUrl()
+  if (!dbUrl) {
+    console.error(
+      'CRITICAL: No database connection URL found in environment variables.',
+    )
+  } else {
+    try {
+      const isSupabase =
+        dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com')
+      const pool = new pg.Pool({
+        connectionString: dbUrl,
+        ssl: isSupabase ? { rejectUnauthorized: false } : false,
+        max: 1,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      })
 
-    const adapter = new PrismaPg(pool)
-    globalForPrisma.prisma = new PrismaClient({
-      adapter,
-      log:
-        process.env.NODE_ENV === 'development'
-          ? ['query', 'error', 'warn']
-          : ['error'],
-    })
-    console.log('PrismaClient initialized successfully')
-  } catch (error) {
-    console.error('Failed to initialize PrismaClient:', error)
+      const adapter = new PrismaPg(pool)
+      globalForPrisma.prisma = new PrismaClient({
+        adapter,
+        log:
+          process.env.NODE_ENV === 'development'
+            ? ['query', 'error', 'warn']
+            : ['error'],
+      })
+      console.log('PrismaClient initialized successfully.')
+    } catch (error) {
+      console.error('PrismaClient initialization error:', error)
+    }
   }
 }
 
-prisma = globalForPrisma.prisma!
-
 export const getPrisma = (): PrismaClient => {
-  if (!prisma) {
-    throw new Error('PrismaClient is not initialized. Check your DATABASE_URL.')
+  const p = globalForPrisma.prisma
+  if (!p) {
+    const dbUrl = getDbUrl()
+    throw new Error(
+      `PrismaClient initialization failed. DATABASE_URL is ${dbUrl ? 'present' : 'MISSING'}.`,
+    )
   }
-  return prisma
+  return p
 }
 
 export default getPrisma

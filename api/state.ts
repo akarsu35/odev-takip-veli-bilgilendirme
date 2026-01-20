@@ -21,12 +21,17 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     try {
+      console.log('GET /api/state: initializing prisma...')
       const p = getPrisma()
 
-      const students = await p.student.findMany()
-      const homeworks = await p.homework.findMany({
-        include: { submissions: true },
-      })
+      console.log('GET /api/state: fetching data...')
+      const [students, homeworks] = await Promise.all([
+        p.student.findMany(),
+        p.homework.findMany({ include: { submissions: true } }),
+      ])
+      console.log(
+        `GET /api/state: found ${students.length} students and ${homeworks.length} homeworks`,
+      )
 
       const convertedHomeworks = homeworks.map((hw: any) => ({
         id: hw.id,
@@ -57,9 +62,10 @@ export default async function handler(req: any, res: any) {
         homeworks: convertedHomeworks,
       })
     } catch (e: any) {
-      console.error('GET /api/state failed', e)
+      console.error('GET /api/state failed:', e)
       return res.status(500).json({
         error: `Veritabanı hatası: ${e.message || 'Veriler çekilemedi.'}`,
+        details: process.env.NODE_ENV === 'development' ? e.stack : undefined,
       })
     }
   }
@@ -127,7 +133,7 @@ export default async function handler(req: any, res: any) {
             homeworkId: upserted.id,
             status: status as string,
             isNotified: hw.notifiedStudents?.[studentId] || false,
-          })
+          }),
         )
 
         if (submissions.length > 0) {
