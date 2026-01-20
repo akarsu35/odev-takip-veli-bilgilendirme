@@ -10,36 +10,44 @@ let prisma: PrismaClient
 
 const dbUrl = process.env.DATABASE_URL
 if (!dbUrl) {
-  throw new Error('DATABASE_URL is not defined in environment variables.')
+  console.error(
+    'CRITICAL: DATABASE_URL is not defined in environment variables.',
+  )
 }
 
-if (process.env.NODE_ENV === 'production') {
-  const pool = new pg.Pool({
-    connectionString: dbUrl,
-    ssl: dbUrl.includes('supabase.co') ? { rejectUnauthorized: false } : false,
-  })
-  const adapter = new PrismaPg(pool)
-  prisma = new PrismaClient({
-    adapter,
-    log: ['error'],
-  })
-} else {
-  if (!globalForPrisma.prisma) {
+if (!globalForPrisma.prisma) {
+  try {
+    const isSupabase =
+      dbUrl?.includes('supabase.co') || dbUrl?.includes('supabase.com')
     const pool = new pg.Pool({
       connectionString: dbUrl,
-      ssl: dbUrl.includes('supabase.co')
-        ? { rejectUnauthorized: false }
-        : false,
+      ssl: isSupabase ? { rejectUnauthorized: false } : false,
+      max: 1, // Minimize connections per lambda instance
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
     })
+
     const adapter = new PrismaPg(pool)
     globalForPrisma.prisma = new PrismaClient({
       adapter,
-      log: ['query', 'error', 'warn'],
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['query', 'error', 'warn']
+          : ['error'],
     })
+    console.log('PrismaClient initialized successfully')
+  } catch (error) {
+    console.error('Failed to initialize PrismaClient:', error)
   }
-  prisma = globalForPrisma.prisma
 }
 
-export const getPrisma = (): PrismaClient => prisma
+prisma = globalForPrisma.prisma!
+
+export const getPrisma = (): PrismaClient => {
+  if (!prisma) {
+    throw new Error('PrismaClient is not initialized. Check your DATABASE_URL.')
+  }
+  return prisma
+}
 
 export default getPrisma
