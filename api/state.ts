@@ -170,9 +170,15 @@ export default async function handler(req: any, res: any) {
 
       return res.status(200).json({ ok: true })
     } catch (e: any) {
-      console.error('POST /api/state failed', e)
+      console.error('POST /api/state failed:', e)
       return res.status(500).json({
         error: `Veritabanı hatası: ${e.message || 'Kayıt başarısız.'}`,
+        details: e.stack,
+        env_check: {
+          has_db_url: !!process.env.DATABASE_URL,
+          has_direct_url: !!process.env.DIRECT_URL,
+          node_env: process.env.NODE_ENV,
+        },
       })
     }
   }
