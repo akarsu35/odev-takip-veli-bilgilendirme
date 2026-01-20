@@ -20,19 +20,26 @@ export const db = {
         const res = await fetch(`${baseUrl}/api/state`).catch((err) => {
           console.error('db.loadState: fetch network error', err)
           throw new Error(
-            'Ağ hatası: Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.'
+            'Ağ hatası: Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin.',
           )
         })
 
         if (!res.ok) {
-          let errorMsg = `Sunucu Hatası (${res.status}): Veriler yüklenemedi.`
+          let errorMsg = `Sunucu Hatası (${res.status})`
           try {
             const errorJson = await res.json()
             if (errorJson.error) {
-              errorMsg = `Hata: ${errorJson.error}`
+              errorMsg += `: ${errorJson.error}`
+            }
+            if (errorJson.details) {
+              console.error('Server side error details:', errorJson.details)
+              errorMsg += `\nDetaylar: ${errorJson.details.substring(0, 100)}...`
+            }
+            if (errorJson.env_check) {
+              console.log('Server environment check:', errorJson.env_check)
             }
           } catch (e) {
-            // Not JSON or other error parsing body
+            errorMsg += ': Veriler yüklenemedi (JSON parse hatası)'
           }
           console.error(`db.loadState: API error ${res.status}`, errorMsg)
           throw new Error(errorMsg)
@@ -67,14 +74,20 @@ export const db = {
             dueDate: hw.dueDate.toISOString(),
             targetClasses: hw.targetClasses,
             targetStudentIds: hw.targetStudents,
-            submissions: hw.submissions.reduce((acc: any, sub: any) => {
-              acc[sub.studentId] = sub.status as HomeworkStatus
-              return acc
-            }, {} as Record<string, HomeworkStatus>),
-            notifiedStudents: hw.submissions.reduce((acc: any, sub: any) => {
-              if (sub.isNotified) acc[sub.studentId] = true
-              return acc
-            }, {} as Record<string, boolean>),
+            submissions: hw.submissions.reduce(
+              (acc: any, sub: any) => {
+                acc[sub.studentId] = sub.status as HomeworkStatus
+                return acc
+              },
+              {} as Record<string, HomeworkStatus>,
+            ),
+            notifiedStudents: hw.submissions.reduce(
+              (acc: any, sub: any) => {
+                if (sub.isNotified) acc[sub.studentId] = true
+                return acc
+              },
+              {} as Record<string, boolean>,
+            ),
           }))
 
           return {
@@ -132,7 +145,8 @@ export const db = {
           const errorData = await res.json().catch(() => ({}))
           console.error(`db.saveState: API error ${res.status}`, errorData)
           throw new Error(
-            errorData.error || `Sunucu Hatası (${res.status}): Kayıt başarısız.`
+            errorData.error ||
+              `Sunucu Hatası (${res.status}): Kayıt başarısız.`,
           )
         }
         console.log('db.saveState: success')
@@ -182,7 +196,7 @@ export const db = {
             })
 
             for (const [studentId, status] of Object.entries(
-              hw.submissions || {}
+              hw.submissions || {},
             )) {
               const notified = hw.notifiedStudents?.[studentId] || false
               await tx.submission.create({
