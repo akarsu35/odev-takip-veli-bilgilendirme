@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import getPrisma from '@/services/prisma'
+import { getPrisma } from '@/services/prisma'
 
 export async function GET() {
   const p = getPrisma()
