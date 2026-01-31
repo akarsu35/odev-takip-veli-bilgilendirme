@@ -43,9 +43,21 @@ const Page: React.FC = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser()
+      console.log('Current User:', user)
       setUser(user)
     }
     getUser()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth State Change:', _event, session?.user)
+      setUser(session?.user ?? null)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
