@@ -36,6 +36,18 @@ const Page: React.FC = () => {
   const [syncFailed, setSyncFailed] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
 
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      setUser(user)
+    }
+    getUser()
+  }, [])
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -185,6 +197,24 @@ const Page: React.FC = () => {
             ÖDEV TAKİP
           </h1>
           <div className="flex items-center gap-2">
+            {user && (
+              <div className="flex items-center gap-2 mr-2 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-100">
+                {user.user_metadata?.avatar_url ? (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt="Avatar"
+                    className="w-6 h-6 rounded-full"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-700 text-xs font-bold">
+                    {(user.email?.[0] || 'U').toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs font-medium text-indigo-900 max-w-[100px] truncate hidden sm:block">
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+              </div>
+            )}
             <button
               onClick={handleLogout}
               className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors"
