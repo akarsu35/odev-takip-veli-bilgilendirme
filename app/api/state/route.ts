@@ -66,18 +66,12 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    console.log('POST /api/state: Unauthorized - No user found')
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const p = getPrisma()
   try {
     const state = await req.json()
-    console.log(`POST /api/state: Syncing for user ${user.id}`)
-    console.log(
-      `Payload: ${state.students?.length} students, ${state.homeworks?.length} homeworks`,
-    )
-
     const students = state.students || []
 
     // Safety check: ensure we don't accidentally take IDs from other users if UUID collision (unlikely)
