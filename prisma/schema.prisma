@@ -10,6 +10,7 @@ datasource db {
 
 model Student {
   id          String       @id @default(uuid())
+  userId      String       @default("legacy_user") // Will be required later
   name        String
   parentName  String
   parentPhone String
@@ -22,6 +23,7 @@ model Student {
 
 model Homework {
   id             String       @id @default(uuid())
+  userId         String       @default("legacy_user")
   title          String
   description    String
   assignedDate   DateTime

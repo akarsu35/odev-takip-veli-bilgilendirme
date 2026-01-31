@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
 import { Toaster } from 'react-hot-toast'
+import { createClient } from '@/utils/supabase/client'
+import { useRouter } from 'next/navigation'
 
 import { db } from '@/services/db'
 import StudentManager from './components/StudentManager'
@@ -15,6 +17,16 @@ const Page: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     'students' | 'homework' | 'check' | 'settings' | 'history'
   >('check')
+
+  const router = useRouter()
+  const supabase = createClient()
+
+  const handleLogout = async () => {
+    localStorage.removeItem('odev_takip_v2')
+    await supabase.auth.signOut()
+    router.refresh()
+    router.push('/login')
+  }
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   )
@@ -173,17 +185,23 @@ const Page: React.FC = () => {
             ÖDEV TAKİP
           </h1>
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors"
+            >
+              ÇIKIŞ
+            </button>
             {syncFailed ? (
               <>
                 <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest hidden sm:inline">
                   BAĞLANTI HATASI
                 </span>
               </>
             ) : (
               <>
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">
                   BULUT DB
                 </span>
               </>

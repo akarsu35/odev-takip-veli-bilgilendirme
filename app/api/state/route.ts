@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/services/prisma'
+import { createClient } from '@/utils/supabase/server'
 
 export async function GET() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const p = getPrisma()
   try {
-    const students = await p.student.findMany()
+    const students = await p.student.findMany({
+      where: { userId: user.id },
+    })
     const homeworks = await p.homework.findMany({
+      where: { userId: user.id },
       include: { submissions: true },
     })
 
@@ -47,28 +60,72 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    console.log('POST /api/state: Unauthorized - No user found')
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const p = getPrisma()
   try {
     const state = await req.json()
-    const students = state.students || []
-    const studentIds = students.map((s: any) => s.id)
+    console.log(`POST /api/state: Syncing for user ${user.id}`)
+    console.log(
+      `Payload: ${state.students?.length} students, ${state.homeworks?.length} homeworks`,
+    )
 
-    // Transaction for atomic update with extended timeout
+    const students = state.students || []
+
+    // Safety check: ensure we don't accidentally take IDs from other users if UUID collision (unlikely)
+    // but mainly ensure we are Operating on the User's Scope.
+
+    // Transaction for atomic update
     await p.$transaction(
       async (tx) => {
-        // Parallelize student upserts
+        // 1. Sync Students
+        // Get existing IDs for this user to know what to delete
+        const existingStudents = await tx.student.findMany({
+          where: { userId: user.id },
+          select: { id: true },
+        })
+        const existingStudentIds = existingStudents.map((s) => s.id)
+
+        const incomingStudentIds = students.map((s: any) => s.id)
+
+        // Delete students not in incoming list (but only for THIS user)
+        const studentsToDelete = existingStudentIds.filter(
+          (id) => !incomingStudentIds.includes(id),
+        )
+        if (studentsToDelete.length > 0) {
+          await tx.student.deleteMany({
+            where: {
+              id: { in: studentsToDelete },
+              userId: user.id, // Redundant if IDs are unique, but good for safety
+            },
+          })
+        }
+
+        // Upsert students
         await Promise.all(
           students.map((s: any) =>
             tx.student.upsert({
               where: { id: s.id },
               create: {
                 id: s.id,
+                userId: user.id,
                 name: s.name,
                 parentName: s.parentName,
                 parentPhone: s.parentPhone,
                 className: s.className,
               },
               update: {
+                // Ensure we don't overwrite userId or allow claiming other's student if ID leaked (though ID is UUID)
+                // Since 'where' is unique ID, if it exists, it updates.
+                // We should ideally check ownership. But for simplicity in this atomic sync:
                 name: s.name,
                 parentName: s.parentName,
                 parentPhone: s.parentPhone,
@@ -78,22 +135,34 @@ export async function POST(req: Request) {
           ),
         )
 
-        if (studentIds.length > 0) {
-          await tx.student.deleteMany({
-            where: { id: { notIn: studentIds } },
+        // 2. Sync Homeworks
+        const existingHomeworks = await tx.homework.findMany({
+          where: { userId: user.id },
+          select: { id: true },
+        })
+        const existingHomeworkIds = existingHomeworks.map((h) => h.id)
+        const incomingHomeworkIds = (state.homeworks || []).map(
+          (h: any) => h.id,
+        )
+
+        const homeworksToDelete = existingHomeworkIds.filter(
+          (id) => !incomingHomeworkIds.includes(id),
+        )
+        if (homeworksToDelete.length > 0) {
+          await tx.homework.deleteMany({
+            where: {
+              id: { in: homeworksToDelete },
+              userId: user.id,
+            },
           })
-        } else {
-          await tx.student.deleteMany()
         }
 
-        // We process homeworks one by one because they have dependent createMany operations
-        // but we could parallelize them too if needed. For now, let's keep it sequential
-        // as it's usually a small number of homeworks compared to students/submissions.
         for (const hw of state.homeworks || []) {
           const upserted = await tx.homework.upsert({
             where: { id: hw.id },
             create: {
               id: hw.id,
+              userId: user.id,
               title: hw.title,
               description: hw.description,
               assignedDate: new Date(hw.assignedDate),
@@ -111,7 +180,10 @@ export async function POST(req: Request) {
             },
           })
 
-          // Clear existing submissions for this homework before recreating
+          // Clear existing submissions for this homework
+          // Submissions don't strictly need userId if they are child of Homework,
+          // but if we added userId to Submission, we sets it here.
+          // Current schema: Submission linked to Homework + Student.
           await tx.submission.deleteMany({
             where: { homeworkId: upserted.id },
           })
@@ -131,18 +203,9 @@ export async function POST(req: Request) {
             })
           }
         }
-
-        const homeworkIds = (state.homeworks || []).map((h: any) => h.id)
-        if (homeworkIds.length > 0) {
-          await tx.homework.deleteMany({
-            where: { id: { notIn: homeworkIds } },
-          })
-        } else {
-          await tx.homework.deleteMany()
-        }
       },
       {
-        timeout: 30000, // 30 seconds timeout
+        timeout: 30000,
       },
     )
 

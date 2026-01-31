@@ -23,6 +23,10 @@ export const db = {
         })
 
         if (!res.ok) {
+          if (res.status === 401) {
+            window.location.href = '/login'
+            throw new Error('Oturum süresi doldu')
+          }
           let errorMsg = `Sunucu Hatası (${res.status})`
           try {
             const errorJson = await res.json()
