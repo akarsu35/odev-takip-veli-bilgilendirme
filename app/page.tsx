@@ -12,6 +12,8 @@ import HomeworkManager from './components/HomeworkManager'
 import CheckPanel from './components/CheckPanel'
 import Settings from './components/Settings'
 import StudentHistory from './components/StudentHistory'
+import ProfileSetupModal from './components/ProfileSetupModal'
+import ProfileSettings from './components/ProfileSettings'
 
 const Page: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
@@ -37,6 +39,9 @@ const Page: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false)
 
   const [user, setUser] = useState<any>(null)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
+  const [profileChecked, setProfileChecked] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -44,6 +49,11 @@ const Page: React.FC = () => {
         data: { user },
       } = await supabase.auth.getUser()
       setUser(user)
+
+      // Check profile after user is loaded
+      if (user) {
+        checkUserProfile()
+      }
     }
     getUser()
 
@@ -51,12 +61,50 @@ const Page: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        checkUserProfile()
+      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
   }, [])
+
+  const checkUserProfile = async () => {
+    if (profileChecked) return
+
+    try {
+      const response = await fetch('/api/profile')
+      if (response.ok) {
+        const data = await response.json()
+        setUserProfile(data.profile)
+
+        // Show modal if profile doesn't exist or is incomplete
+        if (
+          !data.profile ||
+          (!data.profile.fullName &&
+            !data.profile.schoolName &&
+            !data.profile.subject)
+        ) {
+          // Only show modal once per session
+          const hasSeenModal = sessionStorage.getItem('profileModalShown')
+          if (!hasSeenModal) {
+            setShowProfileModal(true)
+            sessionStorage.setItem('profileModalShown', 'true')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Profile check error:', error)
+    } finally {
+      setProfileChecked(true)
+    }
+  }
+
+  const handleProfileSave = (profile: any) => {
+    setUserProfile(profile)
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -197,6 +245,11 @@ const Page: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <Toaster position="top-right" />
+      <ProfileSetupModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        onSave={handleProfileSave}
+      />
       {/* Header */}
       <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-50">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
@@ -278,12 +331,18 @@ const Page: React.FC = () => {
           <CheckPanel
             students={students}
             homeworks={homeworks}
+            userProfile={userProfile}
             onUpdateStatus={updateSubmission}
             onMarkNotified={markAsNotified}
           />
         )}
         {activeTab === 'settings' && (
-          <Settings state={{ students, homeworks }} />
+          <>
+            <ProfileSettings />
+            <div className="mt-4">
+              <Settings state={{ students, homeworks }} />
+            </div>
+          </>
         )}
         {activeTab === 'history' && (
           <StudentHistory

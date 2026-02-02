@@ -7,6 +7,11 @@ import { generateParentMessage } from '@/services/geminiService'
 interface Props {
   students: Student[]
   homeworks: Homework[]
+  userProfile?: {
+    fullName: string | null
+    schoolName: string | null
+    subject: string | null
+  } | null
   onUpdateStatus: (
     hwId: string,
     studentId: string,
@@ -18,6 +23,7 @@ interface Props {
 const CheckPanel: React.FC<Props> = ({
   students,
   homeworks,
+  userProfile,
   onUpdateStatus,
   onMarkNotified,
 }) => {
@@ -77,6 +83,9 @@ const CheckPanel: React.FC<Props> = ({
       student.name,
       selectedHw.title,
       status,
+      userProfile?.schoolName || undefined,
+      userProfile?.subject || undefined,
+      userProfile?.fullName || undefined,
     )
     setIsLoading(null)
 

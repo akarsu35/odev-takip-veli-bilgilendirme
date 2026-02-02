@@ -49,3 +49,13 @@ model Submission {
 
   @@unique([studentId, homeworkId])
 }
+
+model UserProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique // Supabase auth user ID
+  fullName   String?
+  schoolName String?
+  subject    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

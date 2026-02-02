@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const p = getPrisma()
+  const p = await getPrisma()
   try {
     const students = await p.student.findMany({
       where: { userId: user.id },
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const p = getPrisma()
+  const p = await getPrisma()
   try {
     const state = await req.json()
     const students = state.students || []
