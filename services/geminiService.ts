@@ -17,22 +17,20 @@ function fallbackParentMessage(
     return `Sayın Velimiz, bugünkü dersimize ${studentName} katılmadığı için "${homeworkTitle}" konulu ödevini kontrol edemedim. Öğrencimizin ödevini en kısa sürede ulaştırması dileğiyle, İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
-
-  // Tekrar bildirim için özel mesaj
-
   const detailText =
     status === 'MISSING'
       ? 'ödevin tamamlanması'
       : 'eksik kısımların tamamlanması'
+
+  const statusText =
+    status === 'MISSING' ? 'yapılmadığını' : 'bazı bölümlerin eksik kaldığını'
+
+  // Tekrar bildirim için özel mesaj
   if (isRenotify) {
-    const statusText = status === 'MISSING' ? 'yapılmadı' : 'eksik'
     return `Sayın Velimiz, daha önce bildirdiğimiz "${homeworkTitle}" ödevi halen ${statusText} durumunda.Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
   // Normal durum mesajları
-  const statusText =
-    status === 'MISSING' ? 'yapılmadığını' : 'bazı bölümlerin eksik kaldığını'
-  
 
   return `Sayın Velimiz, ${studentName}'in "${homeworkTitle}" isimli ödevini kontrol ettiğimde ${statusText} fark ettim. Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
 }
