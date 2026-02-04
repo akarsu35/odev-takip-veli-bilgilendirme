@@ -27,11 +27,10 @@ function fallbackParentMessage(
 
   // Tekrar bildirim için özel mesaj
   if (isRenotify) {
-    return `Sayın Velimiz, daha önce bildirdiğimiz "${homeworkTitle}" ödevi halen ${statusText} durumunda.Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+    return `Sayın Velimiz, daha önce bildirdiğimiz "${homeworkTitle}" ödevi halen ${statusText}. Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
   // Normal durum mesajları
-
   return `Sayın Velimiz, ${studentName}'in "${homeworkTitle}" isimli ödevini kontrol ettiğimde ${statusText} fark ettim. Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
 }
 
