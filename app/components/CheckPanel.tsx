@@ -75,6 +75,7 @@ const CheckPanel: React.FC<Props> = ({
   const handleSendWhatsApp = async (
     student: Student,
     status: HomeworkStatus,
+    isRenotify: boolean = false,
   ) => {
     if (!selectedHw) return
 
@@ -86,6 +87,7 @@ const CheckPanel: React.FC<Props> = ({
       userProfile?.schoolName || undefined,
       userProfile?.subject || undefined,
       userProfile?.fullName || undefined,
+      isRenotify,
     )
     setIsLoading(null)
 
@@ -174,9 +176,11 @@ const CheckPanel: React.FC<Props> = ({
           filteredStudents.map((student) => {
             const status =
               selectedHw?.submissions[student.id] || HomeworkStatus.PENDING
-            const isMissing =
+            const needsNotification =
               status === HomeworkStatus.MISSING ||
-              status === HomeworkStatus.INCOMPLETE
+              status === HomeworkStatus.INCOMPLETE ||
+              status === HomeworkStatus.ABSENT
+            const isAbsent = status === HomeworkStatus.ABSENT
             const isNotified =
               selectedHw?.notifiedStudents?.[student.id] || false
 
@@ -200,27 +204,43 @@ const CheckPanel: React.FC<Props> = ({
                     </p>
                   </div>
 
-                  {isMissing && selectedHw && (
-                    <button
-                      onClick={() => handleSendWhatsApp(student, status)}
-                      disabled={isLoading === student.id || isNotified}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm ${
-                        isNotified
-                          ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                          : 'bg-green-500 text-white hover:bg-green-600'
-                      }`}
-                    >
-                      <i
-                        className={`${
-                          isNotified ? 'fas fa-check' : 'fab fa-whatsapp'
-                        } text-sm`}
-                      ></i>
-                      {isLoading === student.id
-                        ? '...'
-                        : isNotified
-                          ? 'BİLDİRİLDİ'
-                          : 'BİLDİR'}
-                    </button>
+                  {needsNotification && selectedHw && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          handleSendWhatsApp(student, status, false)
+                        }
+                        disabled={isLoading === student.id || isNotified}
+                        className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm ${
+                          isNotified
+                            ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                            : 'bg-green-500 text-white hover:bg-green-600'
+                        }`}
+                      >
+                        <i
+                          className={`${
+                            isNotified ? 'fas fa-check' : 'fab fa-whatsapp'
+                          } text-sm`}
+                        ></i>
+                        {isLoading === student.id
+                          ? '...'
+                          : isNotified
+                            ? 'BİLDİRİLDİ'
+                            : 'BİLDİR'}
+                      </button>
+                      {isNotified && (
+                        <button
+                          onClick={() =>
+                            handleSendWhatsApp(student, status, true)
+                          }
+                          disabled={isLoading === student.id}
+                          className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm bg-amber-500 text-white hover:bg-amber-600"
+                        >
+                          <i className="fas fa-redo text-sm"></i>
+                          {isLoading === student.id ? '...' : 'TEKRAR BİLDİR'}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -261,6 +281,19 @@ const CheckPanel: React.FC<Props> = ({
                         selectedHwId,
                         student.id,
                         HomeworkStatus.INCOMPLETE,
+                      )
+                    }
+                  />
+                  <StatusButton
+                    label="Gelmedi"
+                    active={status === HomeworkStatus.ABSENT}
+                    color="bg-purple-50 text-purple-600 border-purple-100"
+                    activeColor="bg-purple-600 text-white border-purple-600"
+                    onClick={() =>
+                      onUpdateStatus(
+                        selectedHwId,
+                        student.id,
+                        HomeworkStatus.ABSENT,
                       )
                     }
                   />

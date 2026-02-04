@@ -5,18 +5,31 @@ function fallbackParentMessage(
   schoolName?: string,
   teacherStatus?: string,
   userName?: string,
+  isRenotify?: boolean,
 ): string {
+  const signature =
+    schoolName || teacherStatus || userName
+      ? `\n\n${schoolName || ''}-${teacherStatus || ''}-${userName || ''}`
+      : ''
+
+  // Gelmedi (ABSENT) durumu için özel mesaj
+  if (status === 'ABSENT') {
+    return `Sayın Velimiz, bugünkü dersimize ${studentName} katılmadığı için "${homeworkTitle}" konulu ödevini kontrol edemedik. Öğrencinizin durumu hakkında bilgi vermenizi rica ederiz. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+  }
+
+  // Tekrar bildirim için özel mesaj
+  if (isRenotify) {
+    const statusText = status === 'MISSING' ? 'yapılmadı' : 'eksik'
+    return `Sayın Velimiz, daha önce bildirdiğimiz "${homeworkTitle}" ödevi halen ${statusText} durumunda. ${studentName}'in ödevini en kısa sürede tamamlaması için desteğinizi rica ederiz. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+  }
+
+  // Normal durum mesajları
   const statusText =
     status === 'MISSING' ? 'yapılmadığını' : 'bazı bölümlerin eksik kaldığını'
   const detailText =
     status === 'MISSING'
       ? 'ödevin tamamlanması'
       : 'eksik kısımların tamamlanması'
-
-  const signature =
-    schoolName || teacherStatus || userName
-      ? `\n\n${schoolName || ''}-${teacherStatus || ''}-${userName || ''}`
-      : ''
 
   return `Sayın Velimiz, ${studentName}'in "${homeworkTitle}" isimli ödevini kontrol ettiğimde ${statusText} fark ettim. Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
 }
@@ -28,6 +41,7 @@ export async function generateParentMessage(
   schoolName?: string,
   teacherStatus?: string,
   userName?: string,
+  isRenotify?: boolean,
 ) {
   // AI feature disabled - using fallback message directly
   // To enable: Add GEMINI_API_KEY to .env and uncomment the code below
@@ -38,6 +52,7 @@ export async function generateParentMessage(
     schoolName,
     teacherStatus,
     userName,
+    isRenotify,
   )
 
   /* AI Feature (requires GEMINI_API_KEY in .env):

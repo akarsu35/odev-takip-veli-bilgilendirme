@@ -71,11 +71,12 @@ const StudentHistory: React.FC<Props> = ({
           new Date(a.assignedDate).getTime()
         )
       } else {
-        const order = {
+        const order: Record<HomeworkStatus, number> = {
           [HomeworkStatus.MISSING]: 0,
           [HomeworkStatus.INCOMPLETE]: 1,
-          [HomeworkStatus.PENDING]: 2,
-          [HomeworkStatus.DONE]: 3,
+          [HomeworkStatus.ABSENT]: 2,
+          [HomeworkStatus.PENDING]: 3,
+          [HomeworkStatus.DONE]: 4,
         }
         return order[a.studentStatus] - order[b.studentStatus]
       }
@@ -243,6 +244,17 @@ const StudentHistory: React.FC<Props> = ({
                   ).length
                 }
               />
+              <FilterButton
+                active={statusFilter === HomeworkStatus.ABSENT}
+                onClick={() => setStatusFilter(HomeworkStatus.ABSENT)}
+                label="Gelmedi"
+                color="bg-purple-500"
+                count={
+                  processedHomeworks.filter(
+                    (h) => h.studentStatus === HomeworkStatus.ABSENT,
+                  ).length
+                }
+              />
             </div>
           </div>
 
@@ -330,7 +342,7 @@ const StatCard: React.FC<{
 )
 
 const StatusBadge: React.FC<{ status: HomeworkStatus }> = ({ status }) => {
-  const configs = {
+  const configs: Record<HomeworkStatus, { label: string; class: string }> = {
     [HomeworkStatus.DONE]: {
       label: 'TAMAMLANDI',
       class: 'bg-emerald-50 text-emerald-600 border-emerald-100',
@@ -342,6 +354,10 @@ const StatusBadge: React.FC<{ status: HomeworkStatus }> = ({ status }) => {
     [HomeworkStatus.INCOMPLETE]: {
       label: 'EKSİK',
       class: 'bg-orange-50 text-orange-600 border-orange-100',
+    },
+    [HomeworkStatus.ABSENT]: {
+      label: 'GELMEDİ',
+      class: 'bg-purple-50 text-purple-600 border-purple-100',
     },
     [HomeworkStatus.PENDING]: {
       label: 'BEKLİYOR',

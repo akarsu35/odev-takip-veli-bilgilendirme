@@ -11,6 +11,7 @@ export enum HomeworkStatus {
   DONE = 'DONE',
   MISSING = 'MISSING',
   INCOMPLETE = 'INCOMPLETE',
+  ABSENT = 'ABSENT',
 }
 
 export interface Homework {
