@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
 import { generateParentMessage } from '@/services/geminiService'
+import StudentSearch, { turkishSearch } from './StudentSearch'
 
 interface Props {
   students: Student[]
@@ -20,6 +21,8 @@ interface Props {
   onMarkNotified: (hwId: string, studentId: string) => void
 }
 
+const STORAGE_KEY = 'checkpanel_selected'
+
 const CheckPanel: React.FC<Props> = ({
   students,
   homeworks,
@@ -30,47 +33,85 @@ const CheckPanel: React.FC<Props> = ({
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [selectedHwId, setSelectedHwId] = useState<string>('')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState<string>('')
 
   const classes = Array.from(new Set(students.map((s) => s.className))).sort()
 
-  // Reset selected homework when class changes
+  // Restore selection from localStorage on mount
   useEffect(() => {
-    const classHws = homeworks.filter((h) =>
-      h.targetClasses?.includes(selectedClass),
-    )
-    if (classHws.length > 0) {
-      setSelectedHwId(classHws[0].id)
-    } else {
-      setSelectedHwId('')
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      try {
+        const { classId, hwId } = JSON.parse(saved)
+        if (classId) setSelectedClass(classId)
+        if (hwId) setSelectedHwId(hwId)
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
-  }, [selectedClass, homeworks])
+  }, [])
 
-  // If a class is not selected yet, pick the first one if available
+  // Save selection to localStorage whenever it changes
+  useEffect(() => {
+    if (selectedClass || selectedHwId) {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ classId: selectedClass, hwId: selectedHwId }),
+      )
+    }
+  }, [selectedClass, selectedHwId])
+
+  // Set default class if none selected
   useEffect(() => {
     if (!selectedClass && classes.length > 0) {
       setSelectedClass(classes[0])
     }
   }, [classes, selectedClass])
 
+  // Validate and set homework selection
+  useEffect(() => {
+    const classHws = homeworks.filter((h) =>
+      h.targetClasses?.includes(selectedClass),
+    )
+
+    // Check if current selection is valid for this class
+    const currentSelectionValid = classHws.some((hw) => hw.id === selectedHwId)
+
+    // Only reset if current selection is not valid
+    if (!currentSelectionValid && classHws.length > 0) {
+      setSelectedHwId(classHws[0].id)
+    } else if (classHws.length === 0) {
+      setSelectedHwId('')
+    }
+  }, [selectedClass, homeworks, selectedHwId])
+
   const filteredHomeworks = homeworks.filter((h) =>
     h.targetClasses?.includes(selectedClass),
   )
   const selectedHw = homeworks.find((h) => h.id === selectedHwId)
 
-  const filteredStudents = students.filter((s) => {
-    const isRoomMatch = s.className === selectedClass
-    if (!isRoomMatch) return false
+  const filteredStudents = students
+    .filter((s) => {
+      const isRoomMatch = s.className === selectedClass
+      if (!isRoomMatch) return false
 
-    // If homework has specific targets, only show those students
-    if (
-      selectedHw?.targetStudentIds &&
-      selectedHw.targetStudentIds.length > 0
-    ) {
-      return selectedHw.targetStudentIds.includes(s.id)
-    }
+      // If homework has specific targets, only show those students
+      if (
+        selectedHw?.targetStudentIds &&
+        selectedHw.targetStudentIds.length > 0
+      ) {
+        return selectedHw.targetStudentIds.includes(s.id)
+      }
 
-    return true
-  })
+      return true
+    })
+    .filter((s) => {
+      // Search filter with Turkish character support
+      return (
+        turkishSearch(s.name, searchTerm) ||
+        turkishSearch(s.parentName, searchTerm)
+      )
+    })
 
   const handleSendWhatsApp = async (
     student: Student,
@@ -119,6 +160,9 @@ const CheckPanel: React.FC<Props> = ({
     <div className="space-y-4">
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 sticky top-[72px] z-40 space-y-3">
+        {/* Search Input */}
+        <StudentSearch value={searchTerm} onChange={setSearchTerm} />
+
         <div>
           <label className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">
             1. Sınıf Seçin
@@ -177,10 +221,11 @@ const CheckPanel: React.FC<Props> = ({
             const status =
               selectedHw?.submissions[student.id] || HomeworkStatus.PENDING
             const needsNotification =
+              status === HomeworkStatus.DONE ||
               status === HomeworkStatus.MISSING ||
               status === HomeworkStatus.INCOMPLETE ||
               status === HomeworkStatus.ABSENT
-            const isAbsent = status === HomeworkStatus.ABSENT
+            const isDone = status === HomeworkStatus.DONE
             const isNotified =
               selectedHw?.notifiedStudents?.[student.id] || false
 
@@ -214,7 +259,9 @@ const CheckPanel: React.FC<Props> = ({
                         className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm ${
                           isNotified
                             ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                            : 'bg-green-500 text-white hover:bg-green-600'
+                            : isDone
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                              : 'bg-green-500 text-white hover:bg-green-600'
                         }`}
                       >
                         <i
@@ -226,7 +273,9 @@ const CheckPanel: React.FC<Props> = ({
                           ? '...'
                           : isNotified
                             ? 'BİLDİRİLDİ'
-                            : 'BİLDİR'}
+                            : isDone
+                              ? 'TEŞEKKÜR'
+                              : 'BİLDİR'}
                       </button>
                       {isNotified && (
                         <button

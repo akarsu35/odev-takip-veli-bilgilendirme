@@ -12,9 +12,14 @@ function fallbackParentMessage(
       ? `\n\n${schoolName || ''}-${teacherStatus || ''}-${userName || ''}`
       : ''
 
+  // Tamam (DONE) durumu için teşekkür mesajı
+  if (status === 'DONE') {
+    return `Sayın Velimiz, ${studentName}'in "${homeworkTitle}" isimli ödevini kontrol ettiğimde ödevini eksiksiz ve özenli bir şekilde tamamladığını gördüm. Gösterdiği gayret ve sorumluluk bilinci için ${studentName}'i tebrik ederim. Desteğiniz için teşekkürler, iyi günler dilerim.${signature}`
+  }
+
   // Gelmedi (ABSENT) durumu için özel mesaj
   if (status === 'ABSENT') {
-    return `Sayın Velimiz, bugünkü dersimize ${studentName} katılmadığı için "${homeworkTitle}" konulu ödevini kontrol edemedim. Öğrencimizin ödevini en kısa sürede ulaştırması dileğiyle, İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+    return `Sayın Velimiz, bugünkü dersimize ${studentName} gelmediği için "${homeworkTitle}" konulu ödevini kontrol edemedim. Öğrencimizin ödevini en kısa sürede ulaştırması dileğiyle, İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
   const detailText =

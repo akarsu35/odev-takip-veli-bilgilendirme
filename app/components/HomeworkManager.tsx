@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react'
 import { Homework, Student, HomeworkStatus } from '@/types'
 import { suggestHomeworkDescription } from '@/services/geminiService'
 import toast from 'react-hot-toast'
+import StudentSearch, { turkishSearch } from './StudentSearch'
 
 interface Props {
   homeworks: Homework[]
@@ -42,6 +43,7 @@ const HomeworkManager: React.FC<Props> = ({
     [homeworks, analyzingHomeworkId],
   )
   const [analysisFilter, setAnalysisFilter] = useState<string>('ALL')
+  const [analysisSearchTerm, setAnalysisSearchTerm] = useState<string>('')
 
   const existingClasses = useMemo(
     () => Array.from(new Set(students.map((s) => s.className))).sort(),
@@ -160,8 +162,13 @@ const HomeworkManager: React.FC<Props> = ({
     const filteredStudents = relevantStudents.filter((s) => {
       const status =
         analyzingHomework.submissions[s.id] || HomeworkStatus.PENDING
-      if (analysisFilter === 'ALL') return true
-      return status === analysisFilter
+      // Status filter
+      const statusMatch = analysisFilter === 'ALL' || status === analysisFilter
+      // Search filter with Turkish support
+      const searchMatch =
+        turkishSearch(s.name, analysisSearchTerm) ||
+        turkishSearch(s.parentName, analysisSearchTerm)
+      return statusMatch && searchMatch
     })
 
     const stats = {
@@ -175,6 +182,9 @@ const HomeworkManager: React.FC<Props> = ({
       incomplete: relevantStudents.filter(
         (s) =>
           analyzingHomework.submissions[s.id] === HomeworkStatus.INCOMPLETE,
+      ).length,
+      absent: relevantStudents.filter(
+        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.ABSENT,
       ).length,
     }
 
@@ -197,7 +207,7 @@ const HomeworkManager: React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="bg-purple-100 p-4 rounded-lg text-center">
             <div className="text-2xl font-bold text-purple-700">
               {stats.total}
@@ -220,27 +230,50 @@ const HomeworkManager: React.FC<Props> = ({
             <div className="text-2xl font-bold text-yellow-700">
               {stats.incomplete}
             </div>
-            <div className="text-sm text-yellow-600">Eksik/Düzeltme</div>
+            <div className="text-sm text-yellow-600">Eksik</div>
+          </div>
+          <div className="bg-violet-100 p-4 rounded-lg text-center">
+            <div className="text-2xl font-bold text-violet-700">
+              {stats.absent}
+            </div>
+            <div className="text-sm text-violet-600">Gelmedi</div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b flex gap-2 overflow-x-auto">
-            {['ALL', 'PENDING', 'DONE', 'MISSING', 'INCOMPLETE'].map(
-              (filter) => (
+          <div className="p-4 border-b space-y-3">
+            {/* Search Input */}
+            <StudentSearch
+              value={analysisSearchTerm}
+              onChange={setAnalysisSearchTerm}
+            />
+            {/* Status Filter Buttons */}
+            <div className="flex gap-2 overflow-x-auto">
+              {[
+                'ALL',
+                'PENDING',
+                'DONE',
+                'MISSING',
+                'INCOMPLETE',
+                'ABSENT',
+              ].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setAnalysisFilter(filter)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
                     analysisFilter === filter
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {filter === 'ALL' ? 'Tümü' : filter}
+                  {filter === 'ALL'
+                    ? 'Tümü'
+                    : filter === 'ABSENT'
+                      ? 'Gelmedi'
+                      : filter}
                 </button>
-              ),
-            )}
+              ))}
+            </div>
           </div>
 
           <div className="divide-y max-h-[600px] overflow-y-auto">
@@ -312,6 +345,23 @@ const HomeworkManager: React.FC<Props> = ({
                       title="Eksik"
                     >
                       <i className="fas fa-exclamation"></i>
+                    </button>
+                    <button
+                      onClick={() =>
+                        onUpdateStatus(
+                          analyzingHomework.id,
+                          student.id,
+                          HomeworkStatus.ABSENT,
+                        )
+                      }
+                      className={`p-2 rounded-full ${
+                        status === HomeworkStatus.ABSENT
+                          ? 'bg-violet-100 text-violet-600 ring-2 ring-violet-600'
+                          : 'bg-gray-100 text-gray-400 hover:bg-violet-50 hover:text-violet-500'
+                      }`}
+                      title="Gelmedi"
+                    >
+                      <i className="fas fa-user-slash"></i>
                     </button>
                     {status !== HomeworkStatus.PENDING && (
                       <button
