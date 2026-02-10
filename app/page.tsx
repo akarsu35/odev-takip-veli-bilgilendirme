@@ -349,6 +349,9 @@ const Page: React.FC = () => {
             students={students}
             homeworks={homeworks}
             initialStudentId={selectedStudentId}
+            userProfile={userProfile}
+            onUpdateStatus={updateSubmission}
+            onMarkNotified={markAsNotified}
           />
         )}
       </main>

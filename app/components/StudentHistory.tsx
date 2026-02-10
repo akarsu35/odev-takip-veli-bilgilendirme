@@ -2,17 +2,85 @@
 
 import React, { useState, useMemo } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
+import { generateParentMessage } from '@/services/geminiService'
 
 interface Props {
   students: Student[]
   homeworks: Homework[]
   initialStudentId: string | null
+  userProfile?: {
+    fullName: string | null
+    schoolName: string | null
+    subject: string | null
+  } | null
+  onUpdateStatus: (
+    hwId: string,
+    studentId: string,
+    status: HomeworkStatus,
+  ) => void
+  onMarkNotified: (hwId: string, studentId: string) => void
+}
+
+const STATUS_CONFIG: Record<
+  HomeworkStatus,
+  {
+    label: string
+    icon: string
+    bgColor: string
+    lightBg: string
+    textColor: string
+    borderColor: string
+  }
+> = {
+  [HomeworkStatus.DONE]: {
+    label: 'TAMAMLANDI',
+    icon: 'fas fa-check',
+    bgColor: 'bg-emerald-600',
+    lightBg: 'bg-emerald-50',
+    textColor: 'text-emerald-600',
+    borderColor: 'border-emerald-100',
+  },
+  [HomeworkStatus.MISSING]: {
+    label: 'YAPILMADI',
+    icon: 'fas fa-times',
+    bgColor: 'bg-red-600',
+    lightBg: 'bg-red-50',
+    textColor: 'text-red-600',
+    borderColor: 'border-red-100',
+  },
+  [HomeworkStatus.INCOMPLETE]: {
+    label: 'EKSİK',
+    icon: 'fas fa-exclamation',
+    bgColor: 'bg-orange-600',
+    lightBg: 'bg-orange-50',
+    textColor: 'text-orange-600',
+    borderColor: 'border-orange-100',
+  },
+  [HomeworkStatus.ABSENT]: {
+    label: 'GELMEDİ',
+    icon: 'fas fa-user-slash',
+    bgColor: 'bg-purple-600',
+    lightBg: 'bg-purple-50',
+    textColor: 'text-purple-600',
+    borderColor: 'border-purple-100',
+  },
+  [HomeworkStatus.PENDING]: {
+    label: 'BEKLİYOR',
+    icon: 'fas fa-clock',
+    bgColor: 'bg-slate-500',
+    lightBg: 'bg-slate-50',
+    textColor: 'text-slate-500',
+    borderColor: 'border-slate-100',
+  },
 }
 
 const StudentHistory: React.FC<Props> = ({
   students,
   homeworks,
   initialStudentId,
+  userProfile,
+  onUpdateStatus,
+  onMarkNotified,
 }) => {
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     initialStudentId || '',
@@ -22,6 +90,8 @@ const StudentHistory: React.FC<Props> = ({
     'ALL',
   )
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date')
+  const [expandedHwId, setExpandedHwId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState<string | null>(null)
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === selectedStudentId),
@@ -43,11 +113,9 @@ const StudentHistory: React.FC<Props> = ({
 
     return homeworks
       .filter((h) => {
-        // If student is specifically targeted
         if (h.targetStudentIds && h.targetStudentIds.length > 0) {
           return h.targetStudentIds.includes(selectedStudent.id)
         }
-        // Otherwise, check if their class is targeted
         return h.targetClasses.includes(selectedStudent.className)
       })
       .map((h) => ({
@@ -95,6 +163,39 @@ const StudentHistory: React.FC<Props> = ({
     }
   }, [processedHomeworks])
 
+  const handleSendWhatsApp = async (
+    hw: Homework & { studentStatus: HomeworkStatus },
+    isRenotify: boolean = false,
+  ) => {
+    if (!selectedStudent) return
+
+    setIsLoading(hw.id)
+    try {
+      const message = await generateParentMessage(
+        selectedStudent.name,
+        hw.title,
+        hw.studentStatus,
+        userProfile?.schoolName || undefined,
+        userProfile?.subject || undefined,
+        userProfile?.fullName || undefined,
+        isRenotify,
+      )
+
+      const encodedMessage = encodeURIComponent(message)
+      const phone = selectedStudent.parentPhone.startsWith('9')
+        ? selectedStudent.parentPhone
+        : `9${selectedStudent.parentPhone}`
+      const url = `https://wa.me/${phone}?text=${encodedMessage}`
+
+      window.open(url, '_blank')
+      onMarkNotified(hw.id, selectedStudent.id)
+    } catch (e) {
+      console.error('WhatsApp message failed', e)
+    } finally {
+      setIsLoading(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Student Selector */}
@@ -122,7 +223,10 @@ const StudentHistory: React.FC<Props> = ({
           <select
             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium shadow-sm"
             value={selectedStudentId}
-            onChange={(e) => setSelectedStudentId(e.target.value)}
+            onChange={(e) => {
+              setSelectedStudentId(e.target.value)
+              setExpandedHwId(null)
+            }}
           >
             <option value="">
               {filteredStudents.length > 0
@@ -267,20 +371,155 @@ const StudentHistory: React.FC<Props> = ({
                 </p>
               </div>
             ) : (
-              studentHomeworks.map((hw) => (
-                <div
-                  key={hw.id}
-                  className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center"
-                >
-                  <div>
-                    <h3 className="font-bold text-slate-800">{hw.title}</h3>
-                    <p className="text-xs text-slate-400 mt-1 uppercase font-black">
-                      {new Date(hw.assignedDate).toLocaleDateString('tr-TR')}
-                    </p>
+              studentHomeworks.map((hw) => {
+                const cfg = STATUS_CONFIG[hw.studentStatus]
+                const isExpanded = expandedHwId === hw.id
+                const isNotified =
+                  hw.notifiedStudents?.[selectedStudent.id] || false
+                const needsNotification =
+                  hw.studentStatus === HomeworkStatus.DONE ||
+                  hw.studentStatus === HomeworkStatus.MISSING ||
+                  hw.studentStatus === HomeworkStatus.INCOMPLETE ||
+                  hw.studentStatus === HomeworkStatus.ABSENT
+
+                return (
+                  <div
+                    key={hw.id}
+                    className={`bg-white rounded-xl shadow-sm border transition-all ${
+                      isExpanded
+                        ? `${cfg.borderColor} border-2`
+                        : 'border-slate-100'
+                    }`}
+                  >
+                    {/* Homework Header - Clickable */}
+                    <div
+                      onClick={() => setExpandedHwId(isExpanded ? null : hw.id)}
+                      className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50/50 transition-colors rounded-xl"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-800 truncate">
+                          {hw.title}
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1 uppercase font-black">
+                          {new Date(hw.assignedDate).toLocaleDateString(
+                            'tr-TR',
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <span
+                          className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${cfg.lightBg} ${cfg.textColor} ${cfg.borderColor}`}
+                        >
+                          {cfg.label}
+                        </span>
+                        <i
+                          className={`fas fa-chevron-down text-slate-400 text-xs transition-transform ${
+                            isExpanded ? 'rotate-180' : ''
+                          }`}
+                        ></i>
+                      </div>
+                    </div>
+
+                    {/* Expanded Panel */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-0 space-y-3 border-t border-slate-100">
+                        {/* Description */}
+                        {hw.description && (
+                          <p className="text-sm text-slate-500 pt-3">
+                            {hw.description}
+                          </p>
+                        )}
+
+                        {/* Status Change Buttons */}
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-wider">
+                            Durumu Değiştir
+                          </label>
+                          <div className="flex gap-1.5">
+                            {(
+                              [
+                                HomeworkStatus.DONE,
+                                HomeworkStatus.MISSING,
+                                HomeworkStatus.INCOMPLETE,
+                                HomeworkStatus.ABSENT,
+                                HomeworkStatus.PENDING,
+                              ] as const
+                            ).map((status) => {
+                              const sCfg = STATUS_CONFIG[status]
+                              const isActive = hw.studentStatus === status
+                              return (
+                                <button
+                                  key={status}
+                                  onClick={() =>
+                                    onUpdateStatus(
+                                      hw.id,
+                                      selectedStudent.id,
+                                      status,
+                                    )
+                                  }
+                                  className={`flex-1 py-2 rounded-lg text-[10px] font-black border transition-all flex items-center justify-center gap-1 ${
+                                    isActive
+                                      ? `${sCfg.bgColor} text-white border-transparent`
+                                      : `bg-white ${sCfg.textColor} ${sCfg.borderColor} hover:${sCfg.lightBg}`
+                                  }`}
+                                  title={sCfg.label}
+                                >
+                                  <i className={sCfg.icon}></i>
+                                  <span className="hidden sm:inline">
+                                    {sCfg.label}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* WhatsApp Notification */}
+                        {needsNotification && (
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => handleSendWhatsApp(hw, isNotified)}
+                              disabled={isLoading === hw.id}
+                              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition shadow-sm ${
+                                isNotified
+                                  ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                  : hw.studentStatus === HomeworkStatus.DONE
+                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                                    : 'bg-green-500 text-white hover:bg-green-600'
+                              }`}
+                            >
+                              <i
+                                className={`${
+                                  isNotified
+                                    ? 'fas fa-check'
+                                    : 'fab fa-whatsapp'
+                                } text-lg`}
+                              ></i>
+                              {isLoading === hw.id
+                                ? 'Mesaj hazırlanıyor...'
+                                : isNotified
+                                  ? 'BİLDİRİLDİ'
+                                  : hw.studentStatus === HomeworkStatus.DONE
+                                    ? 'TEŞEKKÜR MESAJI'
+                                    : 'VELİYE BİLDİR'}
+                            </button>
+                            {isNotified && (
+                              <button
+                                onClick={() => handleSendWhatsApp(hw, true)}
+                                disabled={isLoading === hw.id}
+                                className="px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition shadow-sm bg-amber-500 text-white hover:bg-amber-600"
+                              >
+                                <i className="fas fa-redo"></i>
+                                {isLoading === hw.id ? '...' : 'TEKRAR'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <StatusBadge status={hw.studentStatus} />
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </>
@@ -340,39 +579,5 @@ const StatCard: React.FC<{
     </div>
   </div>
 )
-
-const StatusBadge: React.FC<{ status: HomeworkStatus }> = ({ status }) => {
-  const configs: Record<HomeworkStatus, { label: string; class: string }> = {
-    [HomeworkStatus.DONE]: {
-      label: 'TAMAMLANDI',
-      class: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    },
-    [HomeworkStatus.MISSING]: {
-      label: 'YAPILMADI',
-      class: 'bg-red-50 text-red-600 border-red-100',
-    },
-    [HomeworkStatus.INCOMPLETE]: {
-      label: 'EKSİK',
-      class: 'bg-orange-50 text-orange-600 border-orange-100',
-    },
-    [HomeworkStatus.ABSENT]: {
-      label: 'GELMEDİ',
-      class: 'bg-purple-50 text-purple-600 border-purple-100',
-    },
-    [HomeworkStatus.PENDING]: {
-      label: 'BEKLİYOR',
-      class: 'bg-slate-50 text-slate-500 border-slate-100',
-    },
-  }
-
-  const config = configs[status]
-  return (
-    <span
-      className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${config.class}`}
-    >
-      {config.label}
-    </span>
-  )
-}
 
 export default StudentHistory

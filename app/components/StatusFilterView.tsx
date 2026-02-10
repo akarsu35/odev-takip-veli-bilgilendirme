@@ -87,10 +87,26 @@ const StatusFilterView: React.FC<Props> = ({
   const [selectedStatus, setSelectedStatus] = useState<HomeworkStatus>(
     HomeworkStatus.MISSING,
   )
-  const [selectedStudent, setSelectedStudent] =
-    useState<StudentHomeworkInfo | null>(null)
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null,
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+
+  // Derive modal data from props so it stays fresh after status updates
+  const selectedStudent = useMemo(() => {
+    if (!selectedStudentId) return null
+    const student = students.find((s) => s.id === selectedStudentId)
+    if (!student) return null
+    const allHomeworks = getAllHomeworksForStudent(student)
+    return {
+      student,
+      homeworksWithStatus: allHomeworks.map((h) => ({
+        homework: h.homework,
+        status: h.status,
+      })),
+    }
+  }, [selectedStudentId, students, homeworks])
 
   // Get students with the selected status in any homework
   const studentsWithStatus = useMemo(() => {
@@ -133,8 +149,8 @@ const StatusFilterView: React.FC<Props> = ({
       )
   }, [students, homeworks, selectedStatus, searchTerm])
 
-  // Get all homeworks for a student (for modal)
-  const getAllHomeworksForStudent = (student: Student) => {
+  // Get all homeworks for a student
+  function getAllHomeworksForStudent(student: Student) {
     return homeworks
       .filter((hw) => {
         const isTarget =
@@ -179,14 +195,7 @@ const StatusFilterView: React.FC<Props> = ({
   }
 
   const handleStudentClick = (info: StudentHomeworkInfo) => {
-    const allHomeworks = getAllHomeworksForStudent(info.student)
-    setSelectedStudent({
-      student: info.student,
-      homeworksWithStatus: allHomeworks.map((h) => ({
-        homework: h.homework,
-        status: h.status,
-      })),
-    })
+    setSelectedStudentId(info.student.id)
   }
 
   const config = STATUS_CONFIG[selectedStatus]
@@ -320,7 +329,7 @@ const StatusFilterView: React.FC<Props> = ({
                 </p>
               </div>
               <button
-                onClick={() => setSelectedStudent(null)}
+                onClick={() => setSelectedStudentId(null)}
                 className="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center transition-colors"
               >
                 <i className="fas fa-times text-slate-500"></i>
