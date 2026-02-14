@@ -5,6 +5,10 @@ import { Student, Homework, HomeworkStatus } from '@/types'
 import { generateParentMessage } from '@/services/geminiService'
 import StudentSearch, { turkishSearch } from './StudentSearch'
 import StatusFilterView from './StatusFilterView'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface Props {
   students: Student[]
@@ -39,7 +43,6 @@ const CheckPanel: React.FC<Props> = ({
 
   const classes = Array.from(new Set(students.map((s) => s.className))).sort()
 
-  // Restore selection from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
@@ -53,7 +56,6 @@ const CheckPanel: React.FC<Props> = ({
     }
   }, [])
 
-  // Save selection to localStorage whenever it changes
   useEffect(() => {
     if (selectedClass || selectedHwId) {
       localStorage.setItem(
@@ -63,23 +65,17 @@ const CheckPanel: React.FC<Props> = ({
     }
   }, [selectedClass, selectedHwId])
 
-  // Set default class if none selected
   useEffect(() => {
     if (!selectedClass && classes.length > 0) {
       setSelectedClass(classes[0])
     }
   }, [classes, selectedClass])
 
-  // Validate and set homework selection
   useEffect(() => {
     const classHws = homeworks.filter((h) =>
       h.targetClasses?.includes(selectedClass),
     )
-
-    // Check if current selection is valid for this class
     const currentSelectionValid = classHws.some((hw) => hw.id === selectedHwId)
-
-    // Only reset if current selection is not valid
     if (!currentSelectionValid && classHws.length > 0) {
       setSelectedHwId(classHws[0].id)
     } else if (classHws.length === 0) {
@@ -96,19 +92,15 @@ const CheckPanel: React.FC<Props> = ({
     .filter((s) => {
       const isRoomMatch = s.className === selectedClass
       if (!isRoomMatch) return false
-
-      // If homework has specific targets, only show those students
       if (
         selectedHw?.targetStudentIds &&
         selectedHw.targetStudentIds.length > 0
       ) {
         return selectedHw.targetStudentIds.includes(s.id)
       }
-
       return true
     })
     .filter((s) => {
-      // Search filter with Turkish character support
       return (
         turkishSearch(s.name, searchTerm) ||
         turkishSearch(s.parentName, searchTerm)
@@ -143,7 +135,6 @@ const CheckPanel: React.FC<Props> = ({
     window.open(url, '_blank')
     onMarkNotified(selectedHwId, student.id)
 
-    // Save to database
     try {
       await fetch('/api/messages', {
         method: 'POST',
@@ -178,33 +169,36 @@ const CheckPanel: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      {/* View Mode Tabs */}
-      <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 flex gap-2">
-        <button
-          onClick={() => setViewMode('homework')}
-          className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-            viewMode === 'homework'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <i className="fas fa-book"></i>
-          Ödev Kontrolü
-        </button>
-        <button
-          onClick={() => setViewMode('status')}
-          className={`flex-1 px-4 py-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-            viewMode === 'status'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-          }`}
-        >
-          <i className="fas fa-filter"></i>
-          Duruma Göre
-        </button>
-      </div>
+      {/* View Mode Switching Tabs */}
+      <Card className="p-1.5 shadow-sm border-slate-100 mb-4">
+        <div className="flex bg-slate-100/50 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('homework')}
+            className={cn(
+              'flex-1 py-2.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2',
+              viewMode === 'homework'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
+            )}
+          >
+            <i className="fas fa-book-open text-xs"></i>
+            Ödev Kontrolü
+          </button>
+          <button
+            onClick={() => setViewMode('status')}
+            className={cn(
+              'flex-1 py-2.5 rounded-md text-sm font-bold transition-all flex items-center justify-center gap-2',
+              viewMode === 'status'
+                ? 'bg-white text-indigo-600 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100',
+            )}
+          >
+            <i className="fas fa-filter text-xs"></i>
+            Duruma Göre
+          </button>
+        </div>
+      </Card>
 
-      {/* Status Filter View */}
       {viewMode === 'status' ? (
         <StatusFilterView
           students={students}
@@ -215,64 +209,77 @@ const CheckPanel: React.FC<Props> = ({
         />
       ) : (
         <>
-          {/* Filters */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 sticky top-[72px] z-40 space-y-3">
-            {/* Search Input */}
-            <StudentSearch value={searchTerm} onChange={setSearchTerm} />
+          {/* Filters Card */}
+          <Card className="sticky top-[72px] z-40 border-indigo-100 shadow-md">
+            <CardContent className="p-4 space-y-4">
+              <StudentSearch
+                value={searchTerm}
+                onChange={setSearchTerm}
+                placeholder="Öğrenci veya veli ara..."
+              />
 
-            <div>
-              <label className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">
-                1. Sınıf Seçin
-              </label>
-              <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                {classes.map((c) => (
-                  <button
-                    key={c}
-                    onClick={() => setSelectedClass(c)}
-                    className={`px-4 py-2 rounded-lg text-sm font-bold border transition-all whitespace-nowrap ${
-                      selectedClass === c
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'
-                    }`}
-                  >
-                    {c} Sınıfı
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {selectedClass && (
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 mb-1 uppercase tracking-wider">
-                  2. Ödev Seçin
-                </label>
-                {filteredHomeworks.length > 0 ? (
-                  <select
-                    value={selectedHwId}
-                    onChange={(e) => setSelectedHwId(e.target.value)}
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50 font-medium"
-                  >
-                    {filteredHomeworks.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.title}
-                      </option>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    Sınıf Seçin
+                  </label>
+                  <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                    {classes.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setSelectedClass(c)}
+                        className={cn(
+                          'px-4 py-2 rounded-lg text-xs font-bold transition-all border whitespace-nowrap',
+                          selectedClass === c
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
+                        )}
+                      >
+                        {c} Sınıfı
+                      </button>
                     ))}
-                  </select>
-                ) : (
-                  <p className="text-xs text-orange-500 font-bold bg-orange-50 p-3 rounded-lg border border-orange-100">
-                    Bu sınıf için henüz ödev oluşturulmamış.
-                  </p>
+                  </div>
+                </div>
+
+                {selectedClass && (
+                  <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      Kontrol Edilecek Ödev
+                    </label>
+                    {filteredHomeworks.length > 0 ? (
+                      <select
+                        value={selectedHwId}
+                        onChange={(e) => setSelectedHwId(e.target.value)}
+                        className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none bg-slate-50 font-bold text-slate-800 transition-all cursor-pointer"
+                      >
+                        {filteredHomeworks.map((h) => (
+                          <option key={h.id} value={h.id}>
+                            {h.title}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700">
+                        <i className="fas fa-exclamation-triangle"></i>
+                        <p className="text-xs font-bold uppercase tracking-tight">
+                          Bu sınıf için henüz ödev oluşturulmamış.
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Student List */}
-          <div className="space-y-3">
+          <div className="space-y-3 pt-2">
             {selectedClass && filteredStudents.length === 0 ? (
-              <p className="text-center p-10 text-slate-400 italic">
-                Bu sınıfta öğrenci bulunamadı.
-              </p>
+              <Card className="border-dashed border-2 border-slate-200 bg-slate-50">
+                <CardContent className="p-12 text-center text-slate-400 italic font-medium">
+                  Bu kriterlere uygun öğrenci bulunamadı.
+                </CardContent>
+              </Card>
             ) : (
               filteredStudents.map((student) => {
                 const status =
@@ -288,149 +295,134 @@ const CheckPanel: React.FC<Props> = ({
                   selectedHw?.notifiedStudents?.[student.id] || false
 
                 return (
-                  <div
+                  <Card
                     key={student.id}
-                    className={`bg-white p-4 rounded-xl shadow-sm border transition-all ${
-                      isNotified ? 'opacity-80' : ''
-                    }`}
+                    className={cn(
+                      'transition-all border-slate-200',
+                      isNotified && 'opacity-80 grayscale-[0.3]',
+                    )}
                   >
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                          {student.name}
-                          {isNotified && (
-                            <i className="fas fa-check-circle text-emerald-500 text-sm"></i>
-                          )}
-                        </h4>
-                        <p className="text-xs text-slate-500">
-                          Veli: {student.parentName}
-                        </p>
-                      </div>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                            {student.name}
+                            {isNotified && (
+                              <i className="fas fa-check-circle text-emerald-500 text-sm animate-in zoom-in duration-300"></i>
+                            )}
+                          </h4>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                            Veli: {student.parentName}
+                          </p>
+                        </div>
 
-                      {needsNotification && selectedHw && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              handleSendWhatsApp(student, status, false)
-                            }
-                            disabled={isLoading === student.id || isNotified}
-                            className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm ${
-                              isNotified
-                                ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                                : isDone
-                                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                  : 'bg-green-500 text-white hover:bg-green-600'
-                            }`}
-                          >
-                            <i
-                              className={`${
-                                isNotified ? 'fas fa-check' : 'fab fa-whatsapp'
-                              } text-sm`}
-                            ></i>
-                            {isLoading === student.id
-                              ? '...'
-                              : isNotified
-                                ? 'BİLDİRİLDİ'
-                                : isDone
-                                  ? 'TEŞEKKÜR'
-                                  : 'BİLDİR'}
-                          </button>
-                          {isNotified && (
-                            <button
+                        {needsNotification && selectedHw && (
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <Button
                               onClick={() =>
-                                handleSendWhatsApp(student, status, true)
+                                handleSendWhatsApp(student, status, false)
                               }
-                              disabled={isLoading === student.id}
-                              className="px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow-sm bg-amber-500 text-white hover:bg-amber-600"
+                              disabled={isLoading === student.id || isNotified}
+                              className={cn(
+                                'flex-1 sm:flex-none font-bold text-xs h-9 px-4 shadow-sm',
+                                isNotified
+                                  ? 'bg-slate-100 text-slate-400'
+                                  : isDone
+                                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                                    : 'bg-green-500 hover:bg-green-600',
+                              )}
                             >
-                              <i className="fas fa-redo text-sm"></i>
+                              <i
+                                className={cn(
+                                  'text-xs mr-2',
+                                  isNotified
+                                    ? 'fas fa-check'
+                                    : 'fab fa-whatsapp',
+                                )}
+                              ></i>
                               {isLoading === student.id
                                 ? '...'
-                                : 'TEKRAR BİLDİR'}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                                : isNotified
+                                  ? 'BİLDİRİLDİ'
+                                  : isDone
+                                    ? 'TEŞEKKÜR ET'
+                                    : 'BİLDİRİM GÖNDER'}
+                            </Button>
+                            {isNotified && (
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  handleSendWhatsApp(student, status, true)
+                                }
+                                disabled={isLoading === student.id}
+                                className="h-9 px-3 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold text-xs shadow-sm"
+                                title="Tekrar Bildirim Gönder"
+                              >
+                                <i className="fas fa-redo"></i>
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-                      <StatusButton
-                        label="Tamam"
-                        active={status === HomeworkStatus.DONE}
-                        color="bg-green-50 text-green-600 border-green-100"
-                        activeColor="bg-green-600 text-white border-green-600"
-                        onClick={() =>
-                          onUpdateStatus(
-                            selectedHwId,
-                            student.id,
-                            status === HomeworkStatus.DONE
-                              ? HomeworkStatus.PENDING
-                              : HomeworkStatus.DONE,
-                          )
-                        }
-                      />
-                      <StatusButton
-                        label="Yapılmadı"
-                        active={status === HomeworkStatus.MISSING}
-                        color="bg-red-50 text-red-600 border-red-100"
-                        activeColor="bg-red-600 text-white border-red-600"
-                        onClick={() =>
-                          onUpdateStatus(
-                            selectedHwId,
-                            student.id,
-                            status === HomeworkStatus.MISSING
-                              ? HomeworkStatus.PENDING
-                              : HomeworkStatus.MISSING,
-                          )
-                        }
-                      />
-                      <StatusButton
-                        label="Eksik"
-                        active={status === HomeworkStatus.INCOMPLETE}
-                        color="bg-orange-50 text-orange-600 border-orange-100"
-                        activeColor="bg-orange-600 text-white border-orange-600"
-                        onClick={() =>
-                          onUpdateStatus(
-                            selectedHwId,
-                            student.id,
-                            status === HomeworkStatus.INCOMPLETE
-                              ? HomeworkStatus.PENDING
-                              : HomeworkStatus.INCOMPLETE,
-                          )
-                        }
-                      />
-                      <StatusButton
-                        label="Gelmedi"
-                        active={status === HomeworkStatus.ABSENT}
-                        color="bg-purple-50 text-purple-600 border-purple-100"
-                        activeColor="bg-purple-600 text-white border-purple-600"
-                        onClick={() =>
-                          onUpdateStatus(
-                            selectedHwId,
-                            student.id,
-                            status === HomeworkStatus.ABSENT
-                              ? HomeworkStatus.PENDING
-                              : HomeworkStatus.ABSENT,
-                          )
-                        }
-                      />
-                      <StatusButton
-                        label="Getirmedi"
-                        active={status === HomeworkStatus.NOT_BROUGHT}
-                        color="bg-blue-50 text-blue-600 border-blue-100"
-                        activeColor="bg-blue-600 text-white border-blue-600"
-                        onClick={() =>
-                          onUpdateStatus(
-                            selectedHwId,
-                            student.id,
-                            status === HomeworkStatus.NOT_BROUGHT
-                              ? HomeworkStatus.PENDING
-                              : HomeworkStatus.NOT_BROUGHT,
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
+                      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                        {[
+                          {
+                            label: 'Tamam',
+                            status: HomeworkStatus.DONE,
+                            color:
+                              'bg-emerald-50 text-emerald-600 border-emerald-100',
+                            active:
+                              'bg-emerald-600 text-white border-emerald-600',
+                          },
+                          {
+                            label: 'Yapmadı',
+                            status: HomeworkStatus.MISSING,
+                            color: 'bg-rose-50 text-rose-600 border-rose-100',
+                            active: 'bg-rose-600 text-white border-rose-600',
+                          },
+                          {
+                            label: 'Eksik',
+                            status: HomeworkStatus.INCOMPLETE,
+                            color:
+                              'bg-amber-50 text-amber-600 border-amber-100',
+                            active: 'bg-amber-600 text-white border-amber-600',
+                          },
+                          {
+                            label: 'Gelmedi',
+                            status: HomeworkStatus.ABSENT,
+                            color:
+                              'bg-purple-50 text-purple-600 border-purple-100',
+                            active:
+                              'bg-purple-600 text-white border-purple-600',
+                          },
+                          {
+                            label: 'Getirmedi',
+                            status: HomeworkStatus.NOT_BROUGHT,
+                            color: 'bg-blue-50 text-blue-600 border-blue-100',
+                            active: 'bg-blue-600 text-white border-blue-600',
+                          },
+                        ].map((btn) => (
+                          <StatusButton
+                            key={btn.status}
+                            label={btn.label}
+                            active={status === btn.status}
+                            color={btn.color}
+                            activeColor={btn.active}
+                            onClick={() =>
+                              onUpdateStatus(
+                                selectedHwId,
+                                student.id,
+                                status === btn.status
+                                  ? HomeworkStatus.PENDING
+                                  : btn.status,
+                              )
+                            }
+                          />
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
                 )
               })
             )}
@@ -453,9 +445,10 @@ const StatusButton: React.FC<{
       e.preventDefault()
       onClick()
     }}
-    className={`flex-1 min-w-[80px] text-center py-2 rounded-lg text-[10px] font-black border transition-all uppercase tracking-tighter ${
-      active ? activeColor : color
-    }`}
+    className={cn(
+      'flex-1 min-w-[70px] text-center py-2.5 rounded-lg text-[10px] font-black border transition-all uppercase tracking-tighter shadow-sm',
+      active ? activeColor : cn(color, 'hover:shadow-md'),
+    )}
   >
     {label}
   </button>

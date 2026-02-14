@@ -23,6 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 
-/generated/prisma
+# Next.js
+.next/
+out/
+
+# Production
+build
+
+# Misc
+.DS_Store
+*.pem
+
+# Prisma
+/prisma/migrations/
+/prisma/generated/
 
 .env

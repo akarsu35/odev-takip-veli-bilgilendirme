@@ -8,6 +8,8 @@ interface Props {
   placeholder?: string
 }
 
+import { Input } from '@/components/ui/input'
+
 const StudentSearch: React.FC<Props> = ({
   value,
   onChange,
@@ -15,18 +17,18 @@ const StudentSearch: React.FC<Props> = ({
 }) => {
   return (
     <div className="relative">
-      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-      <input
+      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm z-10"></i>
+      <Input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-9 pr-8 py-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm bg-slate-50"
+        className="pl-9 pr-8 bg-slate-50 focus:bg-white transition-colors"
       />
       {value && (
         <button
           onClick={() => onChange('')}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 z-10"
         >
           <i className="fas fa-times text-sm"></i>
         </button>

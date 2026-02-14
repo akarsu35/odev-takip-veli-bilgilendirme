@@ -6,6 +6,16 @@ import { suggestHomeworkDescription } from '@/services/geminiService'
 import toast from 'react-hot-toast'
 import StudentSearch, { turkishSearch } from './StudentSearch'
 import BulkNotificationModal from './BulkNotificationModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface Props {
   homeworks: Homework[]
@@ -165,118 +175,137 @@ const HomeworkManager: React.FC<Props> = ({
   if (analyzingHomework) {
     const relevantStudents = students
       .filter((s) => {
-        // If specific students are targeted, only show them
         if (
           analyzingHomework.targetStudentIds &&
           analyzingHomework.targetStudentIds.length > 0
         ) {
           return analyzingHomework.targetStudentIds.includes(s.id)
         }
-        // Otherwise show all students in target classes
         return analyzingHomework.targetClasses.includes(s.className)
       })
-      .sort((a, b) => a.name.localeCompare(b.name)) // Sort alphabetically
+      .sort((a, b) => a.name.localeCompare(b.name))
 
     const filteredStudents = relevantStudents.filter((s) => {
       const status =
         analyzingHomework.submissions[s.id] || HomeworkStatus.PENDING
-      // Status filter
       const statusMatch = analysisFilter === 'ALL' || status === analysisFilter
-      // Search filter with Turkish support
       const searchMatch =
         turkishSearch(s.name, analysisSearchTerm) ||
         turkishSearch(s.parentName, analysisSearchTerm)
       return statusMatch && searchMatch
     })
 
-    const stats = {
-      total: relevantStudents.length,
-      done: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.DONE,
-      ).length,
-      missing: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.MISSING,
-      ).length,
-      incomplete: relevantStudents.filter(
-        (s) =>
-          analyzingHomework.submissions[s.id] === HomeworkStatus.INCOMPLETE,
-      ).length,
-      absent: relevantStudents.filter(
-        (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.ABSENT,
-      ).length,
-      notBrought: relevantStudents.filter(
-        (s) =>
-          analyzingHomework.submissions[s.id] === HomeworkStatus.NOT_BROUGHT,
-      ).length,
-    }
+    const statsArray = [
+      {
+        label: 'Toplam',
+        count: relevantStudents.length,
+        color: 'indigo',
+        icon: 'fas fa-users',
+      },
+      {
+        label: 'Tamam',
+        count: relevantStudents.filter(
+          (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.DONE,
+        ).length,
+        color: 'emerald',
+        icon: 'fas fa-check-circle',
+      },
+      {
+        label: 'Yapmadı',
+        count: relevantStudents.filter(
+          (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.MISSING,
+        ).length,
+        color: 'rose',
+        icon: 'fas fa-times-circle',
+      },
+      {
+        label: 'Eksik',
+        count: relevantStudents.filter(
+          (s) =>
+            analyzingHomework.submissions[s.id] === HomeworkStatus.INCOMPLETE,
+        ).length,
+        color: 'amber',
+        icon: 'fas fa-exclamation-circle',
+      },
+      {
+        label: 'Gelmedi',
+        count: relevantStudents.filter(
+          (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.ABSENT,
+        ).length,
+        color: 'violet',
+        icon: 'fas fa-user-slash',
+      },
+      {
+        label: 'Getirmedi',
+        count: relevantStudents.filter(
+          (s) =>
+            analyzingHomework.submissions[s.id] === HomeworkStatus.NOT_BROUGHT,
+        ).length,
+        color: 'blue',
+        icon: 'fas fa-box',
+      },
+    ]
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              {analyzingHomework.title}
-            </h2>
-            <p className="text-sm text-gray-500">
-              {analyzingHomework.description}
-            </p>
-          </div>
-          <button
-            onClick={() => setAnalyzingHomeworkId(null)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg"
-          >
-            Geri Dön
-          </button>
+        <Card className="border-indigo-100 shadow-md">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-xl font-bold text-slate-800">
+                {analyzingHomework.title}
+              </CardTitle>
+              <CardDescription className="font-medium">
+                {analyzingHomework.description}
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAnalyzingHomeworkId(null)}
+              className="font-bold border-slate-200"
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              Geri Dön
+            </Button>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          {statsArray.map((stat) => (
+            <Card
+              key={stat.label}
+              className={cn('border-none shadow-sm', `bg-${stat.color}-50`)}
+            >
+              <CardContent className="p-4 text-center">
+                <div
+                  className={cn(
+                    'text-2xl font-black mb-1',
+                    `text-${stat.color}-700`,
+                  )}
+                >
+                  {stat.count}
+                </div>
+                <div
+                  className={cn(
+                    'text-[10px] font-black uppercase tracking-wider',
+                    `text-${stat.color}-600/70`,
+                  )}
+                >
+                  {stat.label}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <div className="grid grid-cols-6 gap-4">
-          <div className="bg-purple-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-700">
-              {stats.total}
-            </div>
-            <div className="text-sm text-purple-600">Toplam Öğrenci</div>
-          </div>
-          <div className="bg-green-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-700">
-              {stats.done}
-            </div>
-            <div className="text-sm text-green-600">Tamamlayan</div>
-          </div>
-          <div className="bg-red-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-red-700">
-              {stats.missing}
-            </div>
-            <div className="text-sm text-red-600">Yapmayan</div>
-          </div>
-          <div className="bg-yellow-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-yellow-700">
-              {stats.incomplete}
-            </div>
-            <div className="text-sm text-yellow-600">Eksik</div>
-          </div>
-          <div className="bg-violet-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-violet-700">
-              {stats.absent}
-            </div>
-            <div className="text-sm text-violet-600">Gelmedi</div>
-          </div>
-          <div className="bg-blue-100 p-4 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-700">
-              {stats.notBrought}
-            </div>
-            <div className="text-sm text-blue-600">Getirmedi</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b space-y-3">
-            {/* Search Input */}
+        <Card className="shadow-sm border-slate-100">
+          <CardHeader className="p-4 border-b border-slate-100 space-y-4">
             <StudentSearch
               value={analysisSearchTerm}
               onChange={setAnalysisSearchTerm}
+              placeholder="Öğrenci veya veli ara..."
             />
-            {/* Status Filter Buttons */}
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               {[
                 'ALL',
                 'PENDING',
@@ -289,403 +318,407 @@ const HomeworkManager: React.FC<Props> = ({
                 <button
                   key={filter}
                   onClick={() => setAnalysisFilter(filter)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={cn(
+                    'px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap uppercase tracking-tighter',
                     analysisFilter === filter
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200',
+                  )}
                 >
                   {filter === 'ALL'
                     ? 'TÜMÜ'
-                    : filter === 'ABSENT'
-                      ? 'GELMEDİ'
-                      : filter === 'NOT_BROUGHT'
-                        ? 'GETİRMEDİ'
-                        : filter}
+                    : filter === 'PENDING'
+                      ? 'BEKLEYEN'
+                      : filter === 'DONE'
+                        ? 'TAMAM'
+                        : filter === 'MISSING'
+                          ? 'YAPILMADI'
+                          : filter === 'INCOMPLETE'
+                            ? 'EKSİK'
+                            : filter === 'ABSENT'
+                              ? 'GELMEDİ'
+                              : 'GETİRMEDİ'}
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="divide-y max-h-[600px] overflow-y-auto">
-            {filteredStudents.map((student) => {
-              const status =
-                analyzingHomework.submissions[student.id] ||
-                HomeworkStatus.PENDING
-              return (
-                <div
-                  key={student.id}
-                  className="p-4 flex items-center justify-between hover:bg-gray-50"
-                >
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {student.name}
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-slate-100 max-h-[1000px] overflow-y-auto">
+              {filteredStudents.map((student) => {
+                const status =
+                  analyzingHomework.submissions[student.id] ||
+                  HomeworkStatus.PENDING
+                return (
+                  <div
+                    key={student.id}
+                    className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-bold text-slate-900 truncate">
+                        {student.name}
+                      </div>
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {student.className} • {student.parentName}
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {student.className} - {student.parentName}
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      {[
+                        {
+                          status: HomeworkStatus.DONE,
+                          icon: 'fa-check',
+                          color: 'emerald',
+                          title: 'Tamamlandı',
+                        },
+                        {
+                          status: HomeworkStatus.MISSING,
+                          icon: 'fa-times',
+                          color: 'rose',
+                          title: 'Yapılmadı',
+                        },
+                        {
+                          status: HomeworkStatus.INCOMPLETE,
+                          icon: 'fa-exclamation',
+                          color: 'amber',
+                          title: 'Eksik',
+                        },
+                        {
+                          status: HomeworkStatus.ABSENT,
+                          icon: 'fa-user-slash',
+                          color: 'violet',
+                          title: 'Gelmedi',
+                        },
+                        {
+                          status: HomeworkStatus.NOT_BROUGHT,
+                          icon: 'fa-box',
+                          color: 'blue',
+                          title: 'Getirmedi',
+                        },
+                      ].map((btn) => (
+                        <button
+                          key={btn.status}
+                          onClick={() =>
+                            onUpdateStatus(
+                              analyzingHomework.id,
+                              student.id,
+                              btn.status,
+                            )
+                          }
+                          className={cn(
+                            'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+                            status === btn.status
+                              ? `bg-${btn.color}-600 text-white shadow-lg scale-110 z-10`
+                              : `bg-slate-100 text-slate-400 hover:bg-${btn.color}-50 hover:text-${btn.color}-600`,
+                          )}
+                          title={btn.title}
+                        >
+                          <i className={cn('fas', btn.icon, 'text-xs')}></i>
+                        </button>
+                      ))}
+                      {status !== HomeworkStatus.PENDING && (
+                        <button
+                          onClick={() =>
+                            onUpdateStatus(
+                              analyzingHomework.id,
+                              student.id,
+                              HomeworkStatus.PENDING,
+                            )
+                          }
+                          className="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 hover:bg-slate-200 transition-colors"
+                          title="Sıfırla"
+                        >
+                          <i className="fas fa-undo text-xs"></i>
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() =>
-                        onUpdateStatus(
-                          analyzingHomework.id,
-                          student.id,
-                          HomeworkStatus.DONE,
-                        )
-                      }
-                      className={`p-2 rounded-full ${
-                        status === HomeworkStatus.DONE
-                          ? 'bg-green-100 text-green-600 ring-2 ring-green-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-500'
-                      }`}
-                      title="Tamamlandı"
-                    >
-                      <i className="fas fa-check"></i>
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateStatus(
-                          analyzingHomework.id,
-                          student.id,
-                          HomeworkStatus.MISSING,
-                        )
-                      }
-                      className={`p-2 rounded-full ${
-                        status === HomeworkStatus.MISSING
-                          ? 'bg-red-100 text-red-600 ring-2 ring-red-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500'
-                      }`}
-                      title="Yapılmadı"
-                    >
-                      <i className="fas fa-times"></i>
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateStatus(
-                          analyzingHomework.id,
-                          student.id,
-                          HomeworkStatus.INCOMPLETE,
-                        )
-                      }
-                      className={`p-2 rounded-full ${
-                        status === HomeworkStatus.INCOMPLETE
-                          ? 'bg-yellow-100 text-yellow-600 ring-2 ring-yellow-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-yellow-50 hover:text-yellow-500'
-                      }`}
-                      title="Eksik"
-                    >
-                      <i className="fas fa-exclamation"></i>
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateStatus(
-                          analyzingHomework.id,
-                          student.id,
-                          HomeworkStatus.ABSENT,
-                        )
-                      }
-                      className={`p-2 rounded-full ${
-                        status === HomeworkStatus.ABSENT
-                          ? 'bg-violet-100 text-violet-600 ring-2 ring-violet-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-violet-50 hover:text-violet-500'
-                      }`}
-                      title="Gelmedi"
-                    >
-                      <i className="fas fa-user-slash"></i>
-                    </button>
-                    <button
-                      onClick={() =>
-                        onUpdateStatus(
-                          analyzingHomework.id,
-                          student.id,
-                          HomeworkStatus.NOT_BROUGHT,
-                        )
-                      }
-                      className={`p-2 rounded-full ${
-                        status === HomeworkStatus.NOT_BROUGHT
-                          ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-600'
-                          : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500'
-                      }`}
-                      title="Getirmedi"
-                    >
-                      <i className="fas fa-box-open"></i>
-                    </button>
-                    {status !== HomeworkStatus.PENDING && (
-                      <button
-                        onClick={() =>
-                          onUpdateStatus(
-                            analyzingHomework.id,
-                            student.id,
-                            HomeworkStatus.PENDING,
-                          )
-                        }
-                        className="p-2 rounded-full bg-gray-100 text-gray-400 hover:bg-gray-200"
-                        title="Sıfırla"
-                      >
-                        <i className="fas fa-undo"></i>
-                      </button>
-                    )}
-                  </div>
+                )
+              })}
+              {filteredStudents.length === 0 && (
+                <div className="p-20 text-center text-slate-400 italic">
+                  Kriterlere uygun öğrenci bulunamadı.
                 </div>
-              )
-            })}
-            {filteredStudents.length === 0 && (
-              <div className="p-8 text-center text-gray-500">
-                Bu filtreye uygun öğrenci bulunamadı.
-              </div>
-            )}
-          </div>
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  // Main Form and List View
   return (
     <div className="space-y-6">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-lg shadow-md space-y-4"
-      >
-        <h2 className="text-xl font-semibold text-gray-800">
-          {editingHomework ? 'Ödevi Düzenle' : 'Yeni Ödev Ekle'}
-        </h2>
-
-        {/* Title Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Başlık
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="Ödev başlığı..."
-            />
-            <button
-              type="button"
-              onClick={handleSuggest}
-              disabled={isSuggesting || !title}
-              className="bg-purple-100 text-purple-700 px-4 py-2 rounded-md hover:bg-purple-200 disabled:opacity-50 transition-colors"
-            >
-              {isSuggesting ? (
-                <i className="fas fa-spinner fa-spin"></i>
-              ) : (
-                <i className="fas fa-wand-magic-sparkles"></i>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Description Textarea */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Açıklama
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            placeholder="Ödev detayları..."
-          />
-        </div>
-
-        {/* Class Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Sınıflar
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {existingClasses.map((cls) => (
-              <button
-                key={cls}
-                type="button"
-                onClick={() => toggleClass(cls)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  targetClasses.includes(cls)
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {cls}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Target Student Selection (Optional) */}
-        {targetClasses.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Öğrenci Seçimi (Tüm sınıf için boş bırakın)
-            </label>
-            <div className="max-h-40 overflow-y-auto border rounded-md p-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-              {availableStudents.map((student) => (
-                <div
-                  key={student.id}
-                  onClick={() => toggleStudent(student.id)}
-                  className={`cursor-pointer p-2 rounded text-sm flex items-center gap-2 ${
-                    targetStudentIds.includes(student.id)
-                      ? 'bg-indigo-50 border border-indigo-200'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div
-                    className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      targetStudentIds.includes(student.id)
-                        ? 'bg-indigo-600 border-indigo-600'
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    {targetStudentIds.includes(student.id) && (
-                      <i className="fas fa-check text-white text-xs"></i>
-                    )}
-                  </div>
-                  <span className="truncate">
-                    {student.name} ({student.className})
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {targetStudentIds.length === 0
-                ? 'Tüm sınıftaki öğrencilere atanacak.'
-                : `${targetStudentIds.length} öğrenci seçildi.`}
-            </div>
-          </div>
+      {/* Homework Form Card */}
+      <Card
+        className={cn(
+          'transition-all',
+          editingHomework && 'border-indigo-200 bg-indigo-50/30 shadow-md',
         )}
-
-        {/* Due Date */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Son Teslim Tarihi
-          </label>
-          <input
-            type="date"
-            value={dueDate ? dueDate.split('T')[0] : ''}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-
-        {/* Form Actions */}
-        <div className="flex justify-end gap-3 pt-2">
-          {editingHomework && (
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-            >
-              İptal
-            </button>
-          )}
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 shadow-sm"
+      >
+        <CardHeader className="pb-4">
+          <CardTitle
+            className={cn(
+              'text-lg font-bold tracking-tight',
+              editingHomework ? 'text-indigo-700' : 'text-slate-800',
+            )}
           >
-            {editingHomework ? 'Güncelle' : 'Oluştur'}
-          </button>
-        </div>
-      </form>
-
-      {/* Homework List */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">
-          Ödev Listesi
-        </h3>
-
-        {/* Search/Filter Bar could go here */}
-
-        <div className="grid grid-cols-1 gap-4">
-          {homeworks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-              Henüz ödev oluşturulmamış.
+            {editingHomework ? (
+              <>
+                <i className="fas fa-edit mr-2"></i>Ödevi Düzenle
+              </>
+            ) : (
+              <>
+                <i className="fas fa-plus-circle mr-2"></i>Yeni Ödev Ekle
+              </>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5 text-left">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                Ödev Başlığı
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  className="flex-1"
+                  placeholder="Örn: 14 Şubat Matematik Ödevi"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSuggest}
+                  disabled={isSuggesting || !title}
+                  className="bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100 hover:text-purple-800 font-bold"
+                >
+                  {isSuggesting ? (
+                    <i className="fas fa-spinner fa-spin"></i>
+                  ) : (
+                    <i className="fas fa-wand-magic-sparkles mr-2"></i>
+                  )}
+                  {isSuggesting ? '' : 'AI Öneri'}
+                </Button>
+              </div>
             </div>
-          ) : (
-            homeworks.map((h) => (
-              <div
-                key={h.id}
-                className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-semibold text-lg text-gray-900">
-                      {h.title}
-                    </h4>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {h.targetClasses.map((cls) => (
-                        <span
-                          key={cls}
-                          className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded"
-                        >
-                          {cls}
-                        </span>
-                      ))}
-                      {h.targetStudentIds && h.targetStudentIds.length > 0 && (
-                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
-                          {h.targetStudentIds.length} Öğrenci
-                        </span>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                Açıklama
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full flex rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all outline-none resize-none"
+                placeholder="Ödev detayları..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                Hedef Sınıflar
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {existingClasses.map((cls) => (
+                  <button
+                    key={cls}
+                    type="button"
+                    onClick={() => toggleClass(cls)}
+                    className={cn(
+                      'px-4 py-1.5 rounded-lg text-xs font-bold transition-all border',
+                      targetClasses.includes(cls)
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
+                    )}
+                  >
+                    {cls} Sınıfı
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {targetClasses.length > 0 && (
+              <div className="space-y-1.5 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex justify-between">
+                  Özel Öğrenci Seçimi
+                  <span className="text-indigo-600 lowercase normal-case">
+                    {targetStudentIds.length === 0
+                      ? '(Tüm sınıfa atanacak)'
+                      : `(${targetStudentIds.length} öğrenci seçildi)`}
+                  </span>
+                </label>
+                <div className="max-h-40 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pr-1 no-scrollbar">
+                  {availableStudents.map((student) => (
+                    <div
+                      key={student.id}
+                      onClick={() => toggleStudent(student.id)}
+                      className={cn(
+                        'cursor-pointer p-2 rounded-lg text-xs font-bold flex items-center gap-2 border transition-all',
+                        targetStudentIds.includes(student.id)
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-100 hover:border-indigo-200',
                       )}
+                    >
+                      <i
+                        className={cn(
+                          'fas',
+                          targetStudentIds.includes(student.id)
+                            ? 'fa-check-circle'
+                            : 'fa-circle opacity-20',
+                          'text-[10px]',
+                        )}
+                      ></i>
+                      <span className="truncate">{student.name}</span>
                     </div>
-                    <p className="text-gray-600 mt-2 text-sm line-clamp-2">
-                      {h.description}
-                    </p>
-                    <div className="text-xs text-gray-500 mt-2">
-                      Son Teslim:{' '}
-                      {isMounted
-                        ? new Date(h.dueDate).toLocaleDateString('tr-TR')
-                        : h.dueDate.split('T')[0]}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button
-                      onClick={() => setNotifyModalHomework(h)}
-                      className="text-green-600 hover:bg-green-50 p-2 rounded transition-colors"
-                      title="Velilere Bildir"
-                    >
-                      <i className="fab fa-whatsapp text-xl"></i>
-                    </button>
-                    <button
-                      onClick={() => setAnalyzingHomeworkId(h.id)}
-                      className="text-blue-600 hover:bg-blue-50 p-2 rounded transition-colors"
-                      title="Analiz Et"
-                    >
-                      <i className="fas fa-chart-pie text-xl"></i>
-                    </button>
-                    <button
-                      onClick={() => handleEdit(h)}
-                      className="text-gray-400 hover:text-indigo-600 hover:bg-gray-50 p-2 rounded transition-colors"
-                      title="Düzenle"
-                    >
-                      <i className="fas fa-edit"></i>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            'Bu ödevi silmek istediğinize emin misiniz?',
-                          )
-                        ) {
-                          onDelete(h.id)
-                          toast.success('Ödev silindi 🗑️')
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded transition-colors"
-                      title="Sil"
-                    >
-                      <i className="fas fa-trash-alt"></i>
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
+                Son Teslim Tarihi
+              </label>
+              <Input
+                type="date"
+                value={dueDate ? dueDate.split('T')[0] : ''}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full md:w-auto"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              {editingHomework && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 font-bold"
+                >
+                  İptal
+                </Button>
+              )}
+              <Button
+                type="submit"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-md"
+              >
+                {editingHomework ? 'Değişiklikleri Kaydet' : 'Ödevi Oluştur'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Homework List Card */}
+      <Card className="border-slate-100 shadow-sm overflow-hidden text-left">
+        <CardHeader className="bg-slate-50/50 p-4 border-b border-slate-100">
+          <CardTitle className="text-base font-bold text-slate-700">
+            Ödev Listesi ({homeworks.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-slate-100">
+            {homeworks.length === 0 ? (
+              <div className="p-16 text-center text-slate-400 space-y-3">
+                <i className="fas fa-book-open text-3xl opacity-20"></i>
+                <p className="italic text-sm font-medium">
+                  Henüz bir ödev oluşturulmamış.
+                </p>
+              </div>
+            ) : (
+              homeworks.map((h) => (
+                <div
+                  key={h.id}
+                  className="p-5 flex flex-col sm:flex-row justify-between items-start gap-4 hover:bg-slate-50 transition-colors group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        {h.title}
+                      </h4>
+                      <div className="flex gap-1.5">
+                        {h.targetClasses.map((cls) => (
+                          <span
+                            key={cls}
+                            className="text-[10px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase tracking-wider border border-indigo-100"
+                          >
+                            {cls}
+                          </span>
+                        ))}
+                        {h.targetStudentIds &&
+                          h.targetStudentIds.length > 0 && (
+                            <span className="text-[10px] font-black bg-amber-50 text-amber-700 px-2 py-0.5 rounded uppercase tracking-wider border border-amber-100">
+                              {h.targetStudentIds.length} ÖZEL
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                    <p className="text-slate-500 text-sm line-clamp-2 font-medium mb-3">
+                      {h.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <span className="flex items-center gap-1.5">
+                        <i className="fas fa-calendar-alt text-indigo-400"></i>
+                        Teslim Tarihi:{' '}
+                        {isMounted
+                          ? new Date(h.dueDate).toLocaleDateString('tr-TR')
+                          : h.dueDate.split('T')[0]}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto overflow-x-auto pb-1 no-scrollbar opacity-60 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs justify-start h-9 px-3"
+                      onClick={() => setNotifyModalHomework(h)}
+                    >
+                      <i className="fab fa-whatsapp mr-2 text-base"></i>
+                      Bildir
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs justify-start h-9 px-3"
+                      onClick={() => setAnalyzingHomeworkId(h.id)}
+                    >
+                      <i className="fas fa-chart-pie mr-2 text-base"></i>
+                      Analiz
+                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
+                        onClick={() => handleEdit(h)}
+                      >
+                        <i className="fas fa-pen text-sm"></i>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              'Bu ödevi silmek istediğinize emin misiniz?',
+                            )
+                          ) {
+                            onDelete(h.id)
+                            toast.success('Ödev silindi 🗑️')
+                          }
+                        }}
+                      >
+                        <i className="fas fa-trash-can text-sm"></i>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Bulk Notification Modal */}
       <BulkNotificationModal

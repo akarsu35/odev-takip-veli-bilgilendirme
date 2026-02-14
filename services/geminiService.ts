@@ -24,7 +24,7 @@ function fallbackParentMessage(
 
   // Getirmedi (NOT_BROUGHT) durumu için özel mesaj
   if (status === 'NOT_BROUGHT') {
-    return `Sayın Velimiz, ${studentName} bugünkü dersimize geldi ancak "${homeworkTitle}" konulu ödevini yanında getirmediği için kontrol edemedim. Ödevlerin zamanında ve düzenli olarak takip edilmesi öğrenme sürecinin devamlılığı açısından büyük önem taşımaktadır. ${studentName}'in ödevini en kısa sürede getirmesi konusunda desteğinizi rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+    return `Sayın Velimiz, ${studentName}  "${homeworkTitle}" konulu ödevini getirmediği için kontrol edemedim. Ödevlerin zamanında ve düzenli olarak takip edilmesi öğrenme sürecinin devamlılığı açısından büyük önem taşımaktadır. ${studentName}'in ödevini en kısa sürede getirmesi konusunda desteğinizi rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
   const detailText =

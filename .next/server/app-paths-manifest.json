@@ -1,9 +1,4 @@
 {
-  "/api/messages/route": "app/api/messages/route.js",
-  "/api/profile/route": "app/api/profile/route.js",
-  "/api/state/route": "app/api/state/route.js",
-  "/auth/callback/route": "app/auth/callback/route.js",
-  "/api/student/route": "app/api/student/route.js",
-  "/page": "app/page.js",
-  "/login/page": "app/login/page.js"
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js"
 }

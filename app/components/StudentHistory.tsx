@@ -3,6 +3,10 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
 import { generateParentMessage } from '@/services/geminiService'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface Props {
   students: Student[]
@@ -30,6 +34,7 @@ const STATUS_CONFIG: Record<
     lightBg: string
     textColor: string
     borderColor: string
+    hoverBg: string
   }
 > = {
   [HomeworkStatus.DONE]: {
@@ -37,32 +42,36 @@ const STATUS_CONFIG: Record<
     icon: 'fas fa-check',
     bgColor: 'bg-emerald-600',
     lightBg: 'bg-emerald-50',
-    textColor: 'text-emerald-600',
-    borderColor: 'border-emerald-100',
+    textColor: 'text-green-600',
+    borderColor: 'border-green-200',
+    hoverBg: 'hover:bg-green-100',
   },
   [HomeworkStatus.MISSING]: {
     label: 'YAPILMADI',
     icon: 'fas fa-times',
-    bgColor: 'bg-red-600',
-    lightBg: 'bg-red-50',
-    textColor: 'text-red-600',
-    borderColor: 'border-red-100',
+    bgColor: 'bg-rose-600',
+    lightBg: 'bg-rose-50',
+    textColor: 'text-rose-600',
+    borderColor: 'border-rose-200',
+    hoverBg: 'hover:bg-rose-100',
   },
   [HomeworkStatus.INCOMPLETE]: {
     label: 'EKSİK',
     icon: 'fas fa-exclamation',
-    bgColor: 'bg-orange-600',
-    lightBg: 'bg-orange-50',
-    textColor: 'text-orange-600',
-    borderColor: 'border-orange-100',
+    bgColor: 'bg-amber-600',
+    lightBg: 'bg-amber-50',
+    textColor: 'text-amber-600',
+    borderColor: 'border-amber-200',
+    hoverBg: 'hover:bg-amber-100',
   },
   [HomeworkStatus.ABSENT]: {
     label: 'GELMEDİ',
     icon: 'fas fa-user-slash',
-    bgColor: 'bg-purple-600',
-    lightBg: 'bg-purple-50',
+    bgColor: 'bg-violet-600',
+    lightBg: 'bg-violet-50',
     textColor: 'text-purple-600',
-    borderColor: 'border-purple-100',
+    borderColor: 'border-purple-200',
+    hoverBg: 'hover:bg-purple-100',
   },
   [HomeworkStatus.NOT_BROUGHT]: {
     label: 'GETİRMEDİ',
@@ -70,15 +79,17 @@ const STATUS_CONFIG: Record<
     bgColor: 'bg-blue-600',
     lightBg: 'bg-blue-50',
     textColor: 'text-blue-600',
-    borderColor: 'border-blue-100',
+    borderColor: 'border-blue-200',
+    hoverBg: 'hover:bg-blue-100',
   },
   [HomeworkStatus.PENDING]: {
     label: 'BEKLİYOR',
     icon: 'fas fa-clock',
-    bgColor: 'bg-slate-500',
+    bgColor: 'bg-slate-600',
     lightBg: 'bg-slate-50',
-    textColor: 'text-slate-500',
-    borderColor: 'border-slate-100',
+    textColor: 'text-slate-600',
+    borderColor: 'border-slate-200',
+    hoverBg: 'hover:bg-slate-100',
   },
 }
 
@@ -119,7 +130,7 @@ const StudentHistory: React.FC<Props> = ({
           s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           s.className.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => a.name.localeCompare(b.name, 'tr'))
   }, [students, searchTerm])
 
   const processedHomeworks = useMemo(() => {
@@ -161,7 +172,10 @@ const StudentHistory: React.FC<Props> = ({
           [HomeworkStatus.PENDING]: 4,
           [HomeworkStatus.DONE]: 5,
         }
-        return order[a.studentStatus] - order[b.studentStatus]
+        return (
+          order[a.studentStatus as HomeworkStatus] -
+          order[b.studentStatus as HomeworkStatus]
+        )
       }
     })
   }, [processedHomeworks, sortBy, statusFilter])
@@ -203,7 +217,19 @@ const StudentHistory: React.FC<Props> = ({
       const url = `https://wa.me/${phone}?text=${encodedMessage}`
 
       window.open(url, '_blank')
-      onMarkNotified(hw.id, selectedStudent.id)
+      if (onMarkNotified) onMarkNotified(hw.id, selectedStudent.id)
+
+      // Save message to history
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          content: message,
+          type: 'HOMEWORK',
+          student: selectedStudent,
+        }),
+      })
     } catch (e) {
       console.error('WhatsApp message failed', e)
     } finally {
@@ -213,258 +239,243 @@ const StudentHistory: React.FC<Props> = ({
 
   return (
     <div className="space-y-6">
-      {/* Student Selector */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-4">
-        <div>
-          <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider ml-1">
-            Öğrenci Ara
-          </label>
-          <div className="relative">
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-300"></i>
-            <input
-              type="text"
-              placeholder="İsim veya sınıf ile ara..."
-              className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50/50 font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      {/* Student Selector Card */}
+      <Card className="border-indigo-100 shadow-md">
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Öğrenci Ara
+            </label>
+            <div className="relative">
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <Input
+                placeholder="İsim veya sınıf ile ara..."
+                className="pl-9 bg-slate-50/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider ml-1">
-            Öğrenci Seçin
-          </label>
-          <select
-            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-medium shadow-sm"
-            value={selectedStudentId}
-            onChange={(e) => {
-              setSelectedStudentId(e.target.value)
-              setExpandedHwId(null)
-            }}
-          >
-            <option value="">
-              {filteredStudents.length > 0
-                ? 'Öğrenci Seçin...'
-                : 'Öğrenci Bulunamadı'}
-            </option>
-            {filteredStudents.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.className})
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Öğrenci Seçin
+            </label>
+            <select
+              className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none bg-white font-bold text-slate-800 transition-all cursor-pointer"
+              value={selectedStudentId}
+              onChange={(e) => {
+                setSelectedStudentId(e.target.value)
+                setExpandedHwId(null)
+              }}
+            >
+              <option value="">
+                {filteredStudents.length > 0
+                  ? 'Öğrenci Seçin...'
+                  : 'Öğrenci Bulunamadı'}
               </option>
-            ))}
-          </select>
-        </div>
-      </div>
+              {filteredStudents.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.className})
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
 
       {selectedStudent ? (
         <>
-          {/* Stats Bar */}
+          {/* Stats Summary Bar */}
           {stats && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <StatCard
-                label="TOPLAM"
+                label="ÖDEV"
                 value={stats.total}
                 icon="fa-book"
-                color="text-indigo-600"
+                color="indigo"
               />
               <StatCard
                 label="TAMAM"
                 value={stats.done}
                 icon="fa-check-circle"
-                color="text-emerald-600"
+                color="emerald"
               />
               <StatCard
                 label="BAŞARI"
                 value={`%${stats.percentage}`}
                 icon="fa-rocket"
-                color="text-orange-600"
+                color="orange"
               />
             </div>
           )}
 
-          {/* List Controls */}
+          {/* List Toolbar */}
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold text-slate-800">Ödev Geçmişi</h2>
-              <div className="flex bg-slate-100 p-1 rounded-lg">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i className="fas fa-history text-indigo-600"></i>
+                Ödev Geçmişi
+              </h2>
+              <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto shadow-inner">
                 <button
                   onClick={() => setSortBy('date')}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  className={cn(
+                    'flex-1 px-4 py-1.5 rounded-md text-xs font-black uppercase tracking-tighter transition-all',
                     sortBy === 'date'
                       ? 'bg-white text-indigo-600 shadow-sm'
-                      : 'text-slate-500'
-                  }`}
+                      : 'text-slate-500 hover:text-slate-700',
+                  )}
                 >
                   Tarih
                 </button>
                 <button
                   onClick={() => setSortBy('status')}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  className={cn(
+                    'flex-1 px-4 py-1.5 rounded-md text-xs font-black uppercase tracking-tighter transition-all',
                     sortBy === 'status'
                       ? 'bg-white text-indigo-600 shadow-sm'
-                      : 'text-slate-500'
-                  }`}
+                      : 'text-slate-500 hover:text-slate-700',
+                  )}
                 >
                   Durum
                 </button>
               </div>
             </div>
 
-            {/* Status Filters */}
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Sub-Filters for Status */}
+            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
               <FilterButton
                 active={statusFilter === 'ALL'}
                 onClick={() => setStatusFilter('ALL')}
-                label="Hepsi"
+                label="HEPSİ"
                 count={processedHomeworks.length}
+                color="indigo"
               />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.DONE}
-                onClick={() => setStatusFilter(HomeworkStatus.DONE)}
-                label="Tamamlandı"
-                color="bg-emerald-500"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.DONE,
-                  ).length
-                }
-              />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.MISSING}
-                onClick={() => setStatusFilter(HomeworkStatus.MISSING)}
-                label="Yapılmadı"
-                color="bg-red-500"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.MISSING,
-                  ).length
-                }
-              />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.INCOMPLETE}
-                onClick={() => setStatusFilter(HomeworkStatus.INCOMPLETE)}
-                label="Eksik"
-                color="bg-orange-500"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.INCOMPLETE,
-                  ).length
-                }
-              />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.PENDING}
-                onClick={() => setStatusFilter(HomeworkStatus.PENDING)}
-                label="Bekliyor"
-                color="bg-slate-400"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.PENDING,
-                  ).length
-                }
-              />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.ABSENT}
-                onClick={() => setStatusFilter(HomeworkStatus.ABSENT)}
-                label="Gelmedi"
-                color="bg-purple-500"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.ABSENT,
-                  ).length
-                }
-              />
-              <FilterButton
-                active={statusFilter === HomeworkStatus.NOT_BROUGHT}
-                onClick={() => setStatusFilter(HomeworkStatus.NOT_BROUGHT)}
-                label="Getirmedi"
-                color="bg-blue-500"
-                count={
-                  processedHomeworks.filter(
-                    (h) => h.studentStatus === HomeworkStatus.NOT_BROUGHT,
-                  ).length
-                }
-              />
+              {[
+                { s: HomeworkStatus.DONE, label: 'TAMAM', color: 'emerald' },
+                { s: HomeworkStatus.MISSING, label: 'YAPMADI', color: 'rose' },
+                {
+                  s: HomeworkStatus.INCOMPLETE,
+                  label: 'EKSİK',
+                  color: 'amber',
+                },
+                { s: HomeworkStatus.ABSENT, label: 'GELMEDİ', color: 'violet' },
+                {
+                  s: HomeworkStatus.NOT_BROUGHT,
+                  label: 'GETİRMEDİ',
+                  color: 'blue',
+                },
+                {
+                  s: HomeworkStatus.PENDING,
+                  label: 'BEKLEYEN',
+                  color: 'slate',
+                },
+              ].map((f) => (
+                <FilterButton
+                  key={f.s}
+                  active={statusFilter === f.s}
+                  onClick={() => setStatusFilter(f.s)}
+                  label={f.label}
+                  count={
+                    processedHomeworks.filter((h) => h.studentStatus === f.s)
+                      .length
+                  }
+                  color={f.color}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Homework List */}
-          <div className="space-y-3">
+          {/* Detailed Homework List */}
+          <div className="space-y-3 pb-24">
             {studentHomeworks.length === 0 ? (
-              <div className="bg-white p-10 rounded-xl text-center border-2 border-dashed border-slate-200">
-                <p className="text-slate-400 italic">
-                  Bu öğrenci için atanmış ödev bulunmuyor.
+              <Card className="border-dashed border-2 bg-slate-50 p-16 text-center">
+                <i className="fas fa-folder-open text-4xl text-slate-200 mb-4"></i>
+                <p className="text-slate-400 font-medium italic">
+                  Filtreye uygun ödev kaydı bulunamadı.
                 </p>
-              </div>
+              </Card>
             ) : (
               studentHomeworks.map((hw) => {
-                const cfg = STATUS_CONFIG[hw.studentStatus]
+                const cfg =
+                  STATUS_CONFIG[hw.studentStatus as HomeworkStatus] ||
+                  STATUS_CONFIG[HomeworkStatus.PENDING]
                 const isExpanded = expandedHwId === hw.id
                 const isNotified =
                   hw.notifiedStudents?.[selectedStudent.id] || false
                 const needsNotification =
-                  hw.studentStatus === HomeworkStatus.DONE ||
-                  hw.studentStatus === HomeworkStatus.MISSING ||
-                  hw.studentStatus === HomeworkStatus.INCOMPLETE ||
-                  hw.studentStatus === HomeworkStatus.ABSENT ||
-                  hw.studentStatus === HomeworkStatus.NOT_BROUGHT
+                  hw.studentStatus !== HomeworkStatus.PENDING
 
                 return (
-                  <div
+                  <Card
                     key={hw.id}
-                    className={`bg-white rounded-xl shadow-sm border transition-all ${
+                    className={cn(
+                      'transition-all duration-300',
                       isExpanded
-                        ? `${cfg.borderColor} border-2`
-                        : 'border-slate-100'
-                    }`}
+                        ? cn(
+                            'border-2 shadow-xl scale-[1.01] z-10',
+                            cfg.borderColor,
+                          )
+                        : 'border-slate-100 hover:border-slate-300',
+                    )}
                   >
-                    {/* Homework Header - Clickable */}
                     <div
                       onClick={() => setExpandedHwId(isExpanded ? null : hw.id)}
-                      className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-50/50 transition-colors rounded-xl"
+                      className="p-4 flex justify-between items-center cursor-pointer select-none"
                     >
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-800 truncate">
+                      <div className="min-w-0 pr-4">
+                        <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
                           {hw.title}
                         </h3>
-                        <p className="text-xs text-slate-400 mt-1 uppercase font-black">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                          <i className="fas fa-calendar-check opacity-50"></i>
                           {isMounted
                             ? new Date(hw.assignedDate).toLocaleDateString(
                                 'tr-TR',
                               )
                             : hw.assignedDate.split('T')[0]}
-                        </p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <span
-                          className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${cfg.lightBg} ${cfg.textColor} ${cfg.borderColor}`}
+                          className={cn(
+                            'text-[10px] font-black px-3 py-1.5 rounded-lg border shadow-sm transition-all',
+                            cfg.lightBg,
+                            cfg.textColor,
+                            cfg.borderColor,
+                            isExpanded && 'scale-110',
+                          )}
                         >
                           {cfg.label}
                         </span>
                         <i
-                          className={`fas fa-chevron-down text-slate-400 text-xs transition-transform ${
-                            isExpanded ? 'rotate-180' : ''
-                          }`}
+                          className={cn(
+                            'fas fa-chevron-down text-slate-300 transition-transform duration-300',
+                            isExpanded && 'rotate-180 text-indigo-400',
+                          )}
                         ></i>
                       </div>
                     </div>
 
-                    {/* Expanded Panel */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 pt-0 space-y-3 border-t border-slate-100">
-                        {/* Description */}
+                      <div className="px-5 pb-5 pt-1 space-y-4 border-t border-slate-50 animate-in slide-in-from-top-2 duration-300">
                         {hw.description && (
-                          <p className="text-sm text-slate-500 pt-3">
-                            {hw.description}
-                          </p>
+                          <div className="pt-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                              Ödev Detayı
+                            </label>
+                            <p className="text-sm text-slate-600 font-medium leading-relaxed bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                              {hw.description}
+                            </p>
+                          </div>
                         )}
 
-                        {/* Status Change Buttons */}
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 mb-2 uppercase tracking-wider">
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1 ml-1">
                             Durumu Değiştir
                           </label>
-                          <div className="flex gap-1.5">
+                          <div className="grid grid-cols-6 gap-1.5">
                             {(
                               [
                                 HomeworkStatus.DONE,
@@ -480,85 +491,100 @@ const StudentHistory: React.FC<Props> = ({
                               return (
                                 <button
                                   key={status}
-                                  onClick={() =>
+                                  onClick={(e) => {
+                                    e.stopPropagation()
                                     onUpdateStatus(
                                       hw.id,
                                       selectedStudent.id,
                                       status,
                                     )
-                                  }
-                                  className={`flex-1 py-2 rounded-lg text-[10px] font-black border transition-all flex items-center justify-center gap-1 ${
+                                  }}
+                                  className={cn(
+                                    'h-10 rounded-xl flex items-center justify-center transition-all border',
                                     isActive
-                                      ? `${sCfg.bgColor} text-white border-transparent`
-                                      : `bg-white ${sCfg.textColor} ${sCfg.borderColor} hover:${sCfg.lightBg}`
-                                  }`}
+                                      ? `${sCfg.bgColor} text-white border-transparent shadow-lg scale-110 z-10`
+                                      : `bg-slate-50 ${sCfg.textColor} border-slate-100 hover:${sCfg.hoverBg}`,
+                                  )}
                                   title={sCfg.label}
                                 >
-                                  <i className={sCfg.icon}></i>
-                                  <span className="hidden sm:inline">
-                                    {sCfg.label}
-                                  </span>
+                                  <i className={cn(sCfg.icon, 'text-sm')}></i>
                                 </button>
                               )
                             })}
                           </div>
                         </div>
 
-                        {/* WhatsApp Notification */}
                         {needsNotification && (
-                          <div className="flex gap-2 pt-1">
-                            <button
-                              onClick={() => handleSendWhatsApp(hw, isNotified)}
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSendWhatsApp(hw, isNotified)
+                              }}
                               disabled={isLoading === hw.id}
-                              className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition shadow-sm ${
+                              className={cn(
+                                'flex-1 font-black text-xs h-11 shadow-md',
                                 isNotified
-                                  ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                  ? 'bg-slate-200 text-slate-500 border border-slate-300'
                                   : hw.studentStatus === HomeworkStatus.DONE
-                                    ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                                    : 'bg-green-500 text-white hover:bg-green-600'
-                              }`}
+                                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                                    : 'bg-green-500 hover:bg-green-600',
+                              )}
                             >
-                              <i
-                                className={`${
-                                  isNotified
-                                    ? 'fas fa-check'
-                                    : 'fab fa-whatsapp'
-                                } text-lg`}
-                              ></i>
+                              {isLoading === hw.id ? (
+                                <i className="fas fa-spinner fa-spin mr-2"></i>
+                              ) : (
+                                <i
+                                  className={cn(
+                                    'text-base mr-3',
+                                    isNotified
+                                      ? 'fas fa-check-double'
+                                      : 'fab fa-whatsapp',
+                                  )}
+                                ></i>
+                              )}
                               {isLoading === hw.id
-                                ? 'Mesaj hazırlanıyor...'
+                                ? 'Hazırlanıyor...'
                                 : isNotified
                                   ? 'BİLDİRİLDİ'
                                   : hw.studentStatus === HomeworkStatus.DONE
                                     ? 'TEŞEKKÜR MESAJI'
                                     : 'VELİYE BİLDİR'}
-                            </button>
+                            </Button>
                             {isNotified && (
-                              <button
-                                onClick={() => handleSendWhatsApp(hw, true)}
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleSendWhatsApp(hw, true)
+                                }}
                                 disabled={isLoading === hw.id}
-                                className="px-4 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 transition shadow-sm bg-amber-500 text-white hover:bg-amber-600"
+                                className="px-5 h-11 border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 font-black text-xs shadow-sm"
+                                title="Tekrar Gönder"
                               >
                                 <i className="fas fa-redo"></i>
-                                {isLoading === hw.id ? '...' : 'TEKRAR'}
-                              </button>
+                              </Button>
                             )}
                           </div>
                         )}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 )
               })
             )}
           </div>
         </>
       ) : (
-        <div className="text-center p-20 opacity-40">
-          <i className="fas fa-user-circle text-6xl mb-4 text-slate-300"></i>
-          <p className="font-medium text-slate-500 italic">
-            Geçmişi görüntülemek için bir öğrenci seçin.
-          </p>
+        <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-in fade-in duration-700">
+          <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-200 text-4xl">
+            <i className="fas fa-user-graduate"></i>
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-slate-900 font-bold text-lg">Öğrenci Seçin</h3>
+            <p className="text-slate-400 font-medium italic text-sm">
+              Gelişim geçmişini görmek için bir öğrenci seçin.
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -569,27 +595,39 @@ const FilterButton: React.FC<{
   active: boolean
   onClick: () => void
   label: string
-  color?: string
+  color: string
   count: number
-}> = ({ active, onClick, label, color = 'bg-indigo-500', count }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 transition-all whitespace-nowrap ${
-      active
-        ? `border-transparent ${color} text-white shadow-md scale-105`
-        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
-    }`}
-  >
-    <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
-    <span
-      className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-        active ? 'bg-white/20' : 'bg-slate-100 text-slate-400'
-      }`}
+}> = ({ active, onClick, label, color, count }) => {
+  const bgClass = `bg-${color}-500`
+  const textClass = `text-${color}-600`
+  const hoverClass = `hover:bg-${color}-50`
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 transition-all whitespace-nowrap shadow-sm group',
+        active
+          ? `border-transparent ${bgClass} text-white shadow-lg scale-105 z-10`
+          : `border-slate-100 bg-white text-slate-500 hover:border-slate-200 ${hoverClass}`,
+      )}
     >
-      {count}
-    </span>
-  </button>
-)
+      <span className="text-[10px] font-black uppercase tracking-wider">
+        {label}
+      </span>
+      <span
+        className={cn(
+          'text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors min-w-[24px]',
+          active
+            ? 'bg-white/20 text-white'
+            : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200',
+        )}
+      >
+        {count}
+      </span>
+    </button>
+  )
+}
 
 const StatCard: React.FC<{
   label: string
@@ -597,17 +635,36 @@ const StatCard: React.FC<{
   icon: string
   color: string
 }> = ({ label, value, icon, color }) => (
-  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 text-center">
-    <div className={`text-xl mb-1 ${color}`}>
-      <i className={`fas ${icon}`}></i>
-    </div>
-    <div className="text-lg font-black text-slate-800 leading-tight">
-      {value}
-    </div>
-    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-      {label}
-    </div>
-  </div>
+  <Card className="border-none shadow-sm overflow-hidden group">
+    <CardContent className={cn('p-4 text-center relative', `bg-${color}-50`)}>
+      <div
+        className={cn(
+          'text-xl mb-1 group-hover:scale-125 transition-transform',
+          `text-${color}-600`,
+        )}
+      >
+        <i className={cn('fas', icon)}></i>
+      </div>
+      <div className="text-xl font-black text-slate-900 leading-tight">
+        {value}
+      </div>
+      <div
+        className={cn(
+          'text-[9px] font-black uppercase tracking-[0.2em] opacity-80',
+          `text-${color}-700`,
+        )}
+      >
+        {label}
+      </div>
+      <i
+        className={cn(
+          'fas',
+          icon,
+          'absolute -right-2 -bottom-2 text-4xl opacity-[0.03] group-hover:scale-150 transition-transform',
+        )}
+      ></i>
+    </CardContent>
+  </Card>
 )
 
 export default StudentHistory

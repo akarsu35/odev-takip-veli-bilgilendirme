@@ -2,6 +2,10 @@
 
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface ProfileSetupModalProps {
   isOpen: boolean
@@ -39,7 +43,7 @@ export default function ProfileSetupModal({
       if (!response.ok) throw new Error('Failed to save profile')
 
       const data = await response.json()
-      toast.success('Profil bilgileriniz kaydedildi!')
+      toast.success('Profil bilgileriniz kaydedildi! ✨')
       onSave(data.profile)
       onClose()
     } catch (error) {
@@ -50,89 +54,85 @@ export default function ProfileSetupModal({
     }
   }
 
-  const handleSkip = () => {
-    onClose()
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-        <div className="flex justify-center mb-6">
-          <div className="bg-indigo-600 text-white p-3 rounded-xl">
-            <i className="fas fa-user-circle text-3xl"></i>
-          </div>
-        </div>
-
-        <h2 className="text-2xl font-bold text-center text-slate-800 mb-2">
-          Profil Bilgileriniz
-        </h2>
-        <p className="text-center text-slate-500 mb-6">
-          Veli mesajlarında kullanılmak üzere bilgilerinizi girebilirsiniz
-          (isteğe bağlı)
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Ad Soyad
-            </label>
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Cumhur Akarsu"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4 animate-in fade-in duration-300">
+      <Card className="max-w-md w-full shadow-2xl rounded-3xl overflow-hidden border-indigo-100 animate-in zoom-in-95 duration-500">
+        <CardContent className="p-8">
+          <div className="flex justify-center mb-6">
+            <div className="bg-indigo-600 text-white w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100 rotate-3 animate-bounce shadow-xl">
+              <i className="fas fa-user-circle text-3xl"></i>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Çalıştığınız Kurum
-            </label>
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Bornova Bilnet"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
-            />
-          </div>
+          <h2 className="text-2xl font-black text-center text-slate-800 mb-2 tracking-tight">
+            Hoş Geldiniz!
+          </h2>
+          <p className="text-center text-slate-500 text-sm font-medium mb-8">
+            Veli mesajlarını kişiselleştirmek için kısa bilgilerinizi
+            girebilirsiniz.
+          </p>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Branş
-            </label>
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Matematik Öğretmeni"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Ad Soyad
+              </label>
+              <Input
+                placeholder="Örn: Cumhur Akarsu"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="h-11 bg-slate-50 border-slate-200"
+              />
+            </div>
 
-          <div className="flex gap-3 mt-6">
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-3 rounded-xl transition-all"
-            >
-              Şimdi Değil
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-              ) : (
-                'Kaydet'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Çalıştığınız Kurum
+              </label>
+              <Input
+                placeholder="Örn: Bornova Bilnet"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+                className="h-11 bg-slate-50 border-slate-200"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Branş
+              </label>
+              <Input
+                placeholder="Örn: Matematik Öğretmeni"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="h-11 bg-slate-50 border-slate-200"
+              />
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                className="flex-1 text-slate-500 font-bold h-12"
+              >
+                Şimdi Değil
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest h-12 shadow-lg shadow-indigo-100"
+              >
+                {loading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  'Kaydet'
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

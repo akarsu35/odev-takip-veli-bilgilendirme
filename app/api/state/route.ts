@@ -243,12 +243,9 @@ export async function POST(req: Request) {
     console.log(`State saved successfully in ${duration}ms`)
     return NextResponse.json({ ok: true, duration })
   } catch (e: any) {
-    console.error('POST /api/state failed:', {
-      message: e.message,
-      stack: e.stack?.split('\n').slice(0, 3).join('\n'),
-    })
+    console.error('POST /api/state failed:', e)
     return NextResponse.json(
-      { error: `Veritabanı hatası: ${e.message || 'Kayıt başarısız.'}` },
+      { error: 'Veritabanı işlemi sırasında bir hata oluştu.' },
       { status: 500 },
     )
   }

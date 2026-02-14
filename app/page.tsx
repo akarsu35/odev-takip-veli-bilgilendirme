@@ -6,7 +6,6 @@ import { Toaster } from 'react-hot-toast'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
-import { db } from '@/services/db'
 import StudentManager from './components/StudentManager'
 import HomeworkManager from './components/HomeworkManager'
 import CheckPanel from './components/CheckPanel'
@@ -16,10 +15,29 @@ import ProfileSetupModal from './components/ProfileSetupModal'
 import ProfileSettings from './components/ProfileSettings'
 import CustomMessagePanel from './components/CustomMessagePanel'
 
+import { useStore } from '@/store/useStore'
+import { useSyncState } from '@/hooks/useAppState'
+
 const Page: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<
-    'students' | 'homework' | 'check' | 'settings' | 'history' | 'messages'
-  >('check')
+  const {
+    activeTab,
+    setActiveTab,
+    students,
+    homeworks,
+    setStudents,
+    setHomeworks,
+    addStudent: addStudentToStore,
+    deleteStudent: deleteStudentFromStore,
+    updateStudent: updateStudentInStore,
+    addHomework: addHomeworkToStore,
+    deleteHomework: deleteHomeworkFromStore,
+    updateHomework: updateHomeworkInStore,
+    updateSubmission: updateSubmissionInStore,
+    markAsNotified: markAsNotifiedInStore,
+  } = useStore()
+
+  // Initialize data syncing
+  const { isInitialized, isLoading } = useSyncState()
 
   const router = useRouter()
   const supabase = createClient()
@@ -30,31 +48,26 @@ const Page: React.FC = () => {
     router.refresh()
     router.push('/login')
   }
+
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   )
-  const [students, setStudents] = useState<Student[]>([])
-  const [homeworks, setHomeworks] = useState<Homework[]>([])
-  const [loading, setLoading] = useState(true)
-  const [syncFailed, setSyncFailed] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
 
+  // These local states are for UI/Auth only, not data
+  const [syncFailed, setSyncFailed] = useState(false) // Keeping simple for now, useSyncState could return error too
   const [user, setUser] = useState<any>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
   const [profileChecked, setProfileChecked] = useState(false)
 
+  // Auth Effect
   useEffect(() => {
     const getUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser()
       setUser(user)
-
-      // Check profile after user is loaded
-      if (user) {
-        checkUserProfile()
-      }
+      if (user) checkUserProfile()
     }
     getUser()
 
@@ -62,33 +75,25 @@ const Page: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) {
-        checkUserProfile()
-      }
+      if (session?.user) checkUserProfile()
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
   const checkUserProfile = async () => {
     if (profileChecked) return
-
     try {
       const response = await fetch('/api/profile')
       if (response.ok) {
         const data = await response.json()
         setUserProfile(data.profile)
-
-        // Show modal if profile doesn't exist or is incomplete
         if (
           !data.profile ||
           (!data.profile.fullName &&
             !data.profile.schoolName &&
             !data.profile.subject)
         ) {
-          // Check sessionStorage only on client side
           if (typeof window !== 'undefined') {
             const hasSeenModal = sessionStorage.getItem('profileModalShown')
             if (!hasSeenModal) {
@@ -109,57 +114,13 @@ const Page: React.FC = () => {
     setUserProfile(profile)
   }
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const state = await db.loadState()
+  // Handlers wrapped to preserve existing logic (e.g. API calls)
 
-        // Migration: Convert targetClass to targetClasses
-        const migratedHomeworks = (state.homeworks || []).map((hw: any) => {
-          if (hw.targetClass && !hw.targetClasses) {
-            const { targetClass, ...rest } = hw
-            return { ...rest, targetClasses: [targetClass] }
-          }
-          return hw
-        })
+  const addStudent = (s: Student) => addStudentToStore(s)
 
-        setStudents(state.students || [])
-        setHomeworks(migratedHomeworks)
-        setIsInitialized(true)
-      } catch (e) {
-        console.error('Initialization failed', e)
-        setSyncFailed(true)
-        const localData = localStorage.getItem('odev_takip_v2')
-        if (localData) {
-          const parsed = JSON.parse(localData)
-          setStudents(parsed.students || [])
-          setHomeworks(parsed.homeworks || [])
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-    init()
-  }, [])
-
-  useEffect(() => {
-    if (!loading && isInitialized && !syncFailed) {
-      const timeoutId = setTimeout(() => {
-        const savePromise = db.saveState({ students, homeworks })
-
-        savePromise.catch((e) => {
-          console.error('Auto-save failed', e)
-        })
-      }, 2000)
-
-      return () => clearTimeout(timeoutId)
-    }
-  }, [students, homeworks, loading, isInitialized, syncFailed])
-
-  const addStudent = (s: Student) => setStudents((prev) => [...prev, s])
   const deleteStudent = async (id: string) => {
     const previousStudents = students
-    setStudents((prev) => prev.filter((s) => s.id !== id))
+    deleteStudentFromStore(id)
 
     try {
       const res = await fetch(`/api/student?id=${encodeURIComponent(id)}`, {
@@ -172,69 +133,25 @@ const Page: React.FC = () => {
       alert('Öğrenci silinemedi: ' + (e as Error).message)
     }
   }
-  const updateStudent = (updatedStudent: Student) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)),
-    )
-  }
 
-  const addHomework = (h: Homework) => setHomeworks((prev) => [h, ...prev])
-  const deleteHomework = (id: string) => {
-    setHomeworks((prev) => prev.filter((h) => h.id !== id))
-  }
-  const updateHomework = (updatedHomework: Homework) => {
-    setHomeworks((prev) =>
-      prev.map((h) => {
-        if (h.id === updatedHomework.id) {
-          return {
-            ...updatedHomework,
-            submissions: h.submissions,
-            notifiedStudents: h.notifiedStudents,
-          }
-        }
-        return h
-      }),
-    )
-  }
+  const updateStudent = (s: Student) => updateStudentInStore(s)
+
+  const addHomework = (h: Homework) => addHomeworkToStore(h)
+
+  const deleteHomework = (id: string) => deleteHomeworkFromStore(id)
+
+  const updateHomework = (h: Homework) => updateHomeworkInStore(h)
 
   const updateSubmission = (
     hwId: string,
     studentId: string,
     status: HomeworkStatus,
-  ) => {
-    if (!hwId) return
-    setHomeworks((prev) =>
-      prev.map((hw) => {
-        if (hw.id === hwId) {
-          return {
-            ...hw,
-            submissions: { ...hw.submissions, [studentId]: status },
-          }
-        }
-        return hw
-      }),
-    )
-  }
+  ) => updateSubmissionInStore(hwId, studentId, status)
 
-  const markAsNotified = (hwId: string, studentId: string) => {
-    if (!hwId) return
-    setHomeworks((prev) =>
-      prev.map((hw) => {
-        if (hw.id === hwId) {
-          return {
-            ...hw,
-            notifiedStudents: {
-              ...(hw.notifiedStudents || {}),
-              [studentId]: true,
-            },
-          }
-        }
-        return hw
-      }),
-    )
-  }
+  const markAsNotified = (hwId: string, studentId: string) =>
+    markAsNotifiedInStore(hwId, studentId)
 
-  if (loading) {
+  if (isLoading && !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
@@ -289,20 +206,18 @@ const Page: React.FC = () => {
             >
               ÇIKIŞ
             </button>
-            {syncFailed ? (
-              <>
-                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest hidden sm:inline">
-                  BAĞLANTI HATASI
-                </span>
-              </>
-            ) : (
+            {/* Sync Status - Simplified for new hook */}
+            {!isLoading ? (
               <>
                 <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">
                   BULUT DB
                 </span>
               </>
+            ) : (
+              <span className="text-[10px] font-bold text-slate-400">
+                SYNC...
+              </span>
             )}
           </div>
         </div>

@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface UserProfile {
   id: string
@@ -55,7 +59,7 @@ export default function ProfileSettings() {
       const data = await response.json()
       setProfile(data.profile)
       setIsEditing(false)
-      toast.success('Profil bilgileriniz güncellendi!')
+      toast.success('Profil bilgileriniz güncellendi! ✨')
     } catch (error) {
       console.error('Profile save error:', error)
       toast.error('Profil güncellenemedi')
@@ -74,110 +78,110 @@ export default function ProfileSettings() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+    <Card className="border-indigo-100 shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
+        <CardTitle className="text-xl font-bold flex items-center gap-2">
           <i className="fas fa-user-circle text-indigo-600"></i>
           Profil Bilgilerim
-        </h3>
+        </CardTitle>
         {!isEditing && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsEditing(true)}
-            className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            className="text-indigo-600 font-bold hover:text-indigo-700 hover:bg-indigo-50"
           >
-            <i className="fas fa-edit mr-1"></i>
+            <i className="fas fa-edit mr-2"></i>
             Düzenle
-          </button>
+          </Button>
         )}
-      </div>
+      </CardHeader>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Ad Soyad
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Cumhur Akarsu"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          ) : (
-            <p className="text-slate-600 px-4 py-2 bg-slate-50 rounded-lg">
-              {profile?.fullName || 'Belirtilmemiş'}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Çalıştığınız Kurum
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Bornova Bilnet"
-              value={schoolName}
-              onChange={(e) => setSchoolName(e.target.value)}
-            />
-          ) : (
-            <p className="text-slate-600 px-4 py-2 bg-slate-50 rounded-lg">
-              {profile?.schoolName || 'Belirtilmemiş'}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Branş
-          </label>
-          {isEditing ? (
-            <input
-              type="text"
-              className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Matematik Öğretmeni"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            />
-          ) : (
-            <p className="text-slate-600 px-4 py-2 bg-slate-50 rounded-lg">
-              {profile?.subject || 'Belirtilmemiş'}
-            </p>
-          )}
-        </div>
-
-        {isEditing && (
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={handleCancel}
-              className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2 rounded-lg transition-all"
-            >
-              İptal
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-              ) : (
-                'Kaydet'
-              )}
-            </button>
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Ad Soyad
+            </label>
+            {isEditing ? (
+              <Input
+                placeholder="Örn: Cumhur Akarsu"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
+            ) : (
+              <div className="text-slate-700 font-medium px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                {profile?.fullName || 'Belirtilmemiş'}
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-700">
-          <i className="fas fa-info-circle mr-1"></i>
-          Bu bilgiler veli mesajlarında kullanılır. İsteğe bağlıdır.
-        </p>
-      </div>
-    </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Çalıştığınız Kurum
+            </label>
+            {isEditing ? (
+              <Input
+                placeholder="Örn: Bornova Bilnet"
+                value={schoolName}
+                onChange={(e) => setSchoolName(e.target.value)}
+              />
+            ) : (
+              <div className="text-slate-700 font-medium px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                {profile?.schoolName || 'Belirtilmemiş'}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Branş
+            </label>
+            {isEditing ? (
+              <Input
+                placeholder="Örn: Matematik Öğretmeni"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            ) : (
+              <div className="text-slate-700 font-medium px-4 py-3 bg-slate-50 rounded-xl border border-slate-100">
+                {profile?.subject || 'Belirtilmemiş'}
+              </div>
+            )}
+          </div>
+
+          {isEditing && (
+            <div className="flex gap-3 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Button
+                variant="outline"
+                onClick={handleCancel}
+                className="flex-1 font-bold h-11"
+              >
+                İptal
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={loading}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 font-bold h-11 shadow-lg shadow-indigo-100"
+              >
+                {loading ? (
+                  <i className="fas fa-spinner fa-spin"></i>
+                ) : (
+                  'Değişiklikleri Kaydet'
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 border-dashed">
+          <p className="text-xs text-blue-700 font-medium leading-relaxed">
+            <i className="fas fa-info-circle mr-2 opacity-70"></i>
+            Bu bilgiler veli mesajlarında (imza olarak) kullanılır. Tamamen
+            isteğe bağlıdır ve dilediğiniz zaman güncelleyebilirsiniz.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
