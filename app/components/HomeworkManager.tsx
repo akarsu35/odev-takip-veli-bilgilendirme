@@ -1,14 +1,20 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Homework, Student, HomeworkStatus } from '@/types'
 import { suggestHomeworkDescription } from '@/services/geminiService'
 import toast from 'react-hot-toast'
 import StudentSearch, { turkishSearch } from './StudentSearch'
+import BulkNotificationModal from './BulkNotificationModal'
 
 interface Props {
   homeworks: Homework[]
   students: Student[]
+  userProfile?: {
+    fullName: string | null
+    schoolName: string | null
+    subject: string | null
+  } | null
   onAdd: (h: Homework) => void
   onDelete: (id: string) => void
   onUpdate: (h: Homework) => void
@@ -17,15 +23,18 @@ interface Props {
     studentId: string,
     status: HomeworkStatus,
   ) => void
+  onMarkNotified?: (hwId: string, studentId: string) => void
 }
 
 const HomeworkManager: React.FC<Props> = ({
   homeworks,
   students,
+  userProfile,
   onAdd,
   onDelete,
   onUpdate,
   onUpdateStatus,
+  onMarkNotified,
 }) => {
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null)
   const [title, setTitle] = useState('')
@@ -38,12 +47,21 @@ const HomeworkManager: React.FC<Props> = ({
   const [analyzingHomeworkId, setAnalyzingHomeworkId] = useState<string | null>(
     null,
   )
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Prevent SSR hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const analyzingHomework = useMemo(
     () => homeworks.find((h) => h.id === analyzingHomeworkId) || null,
     [homeworks, analyzingHomeworkId],
   )
   const [analysisFilter, setAnalysisFilter] = useState<string>('ALL')
   const [analysisSearchTerm, setAnalysisSearchTerm] = useState<string>('')
+  const [notifyModalHomework, setNotifyModalHomework] =
+    useState<Homework | null>(null)
 
   const existingClasses = useMemo(
     () => Array.from(new Set(students.map((s) => s.className))).sort(),
@@ -186,6 +204,10 @@ const HomeworkManager: React.FC<Props> = ({
       absent: relevantStudents.filter(
         (s) => analyzingHomework.submissions[s.id] === HomeworkStatus.ABSENT,
       ).length,
+      notBrought: relevantStudents.filter(
+        (s) =>
+          analyzingHomework.submissions[s.id] === HomeworkStatus.NOT_BROUGHT,
+      ).length,
     }
 
     return (
@@ -207,7 +229,7 @@ const HomeworkManager: React.FC<Props> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-6 gap-4">
           <div className="bg-purple-100 p-4 rounded-lg text-center">
             <div className="text-2xl font-bold text-purple-700">
               {stats.total}
@@ -238,6 +260,12 @@ const HomeworkManager: React.FC<Props> = ({
             </div>
             <div className="text-sm text-violet-600">Gelmedi</div>
           </div>
+          <div className="bg-blue-100 p-4 rounded-lg text-center">
+            <div className="text-2xl font-bold text-blue-700">
+              {stats.notBrought}
+            </div>
+            <div className="text-sm text-blue-600">Getirmedi</div>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -256,6 +284,7 @@ const HomeworkManager: React.FC<Props> = ({
                 'MISSING',
                 'INCOMPLETE',
                 'ABSENT',
+                'NOT_BROUGHT',
               ].map((filter) => (
                 <button
                   key={filter}
@@ -267,10 +296,12 @@ const HomeworkManager: React.FC<Props> = ({
                   }`}
                 >
                   {filter === 'ALL'
-                    ? 'Tümü'
+                    ? 'TÜMÜ'
                     : filter === 'ABSENT'
-                      ? 'Gelmedi'
-                      : filter}
+                      ? 'GELMEDİ'
+                      : filter === 'NOT_BROUGHT'
+                        ? 'GETİRMEDİ'
+                        : filter}
                 </button>
               ))}
             </div>
@@ -362,6 +393,23 @@ const HomeworkManager: React.FC<Props> = ({
                       title="Gelmedi"
                     >
                       <i className="fas fa-user-slash"></i>
+                    </button>
+                    <button
+                      onClick={() =>
+                        onUpdateStatus(
+                          analyzingHomework.id,
+                          student.id,
+                          HomeworkStatus.NOT_BROUGHT,
+                        )
+                      }
+                      className={`p-2 rounded-full ${
+                        status === HomeworkStatus.NOT_BROUGHT
+                          ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-600'
+                          : 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500'
+                      }`}
+                      title="Getirmedi"
+                    >
+                      <i className="fas fa-box-open"></i>
                     </button>
                     {status !== HomeworkStatus.PENDING && (
                       <button
@@ -588,10 +636,19 @@ const HomeworkManager: React.FC<Props> = ({
                     </p>
                     <div className="text-xs text-gray-500 mt-2">
                       Son Teslim:{' '}
-                      {new Date(h.dueDate).toLocaleDateString('tr-TR')}
+                      {isMounted
+                        ? new Date(h.dueDate).toLocaleDateString('tr-TR')
+                        : h.dueDate.split('T')[0]}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => setNotifyModalHomework(h)}
+                      className="text-green-600 hover:bg-green-50 p-2 rounded transition-colors"
+                      title="Velilere Bildir"
+                    >
+                      <i className="fab fa-whatsapp text-xl"></i>
+                    </button>
                     <button
                       onClick={() => setAnalyzingHomeworkId(h.id)}
                       className="text-blue-600 hover:bg-blue-50 p-2 rounded transition-colors"
@@ -629,6 +686,20 @@ const HomeworkManager: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* Bulk Notification Modal */}
+      <BulkNotificationModal
+        isOpen={!!notifyModalHomework}
+        homework={notifyModalHomework}
+        students={students}
+        userProfile={userProfile}
+        onClose={() => setNotifyModalHomework(null)}
+        onMarkNotified={
+          notifyModalHomework && onMarkNotified
+            ? (studentId) => onMarkNotified(notifyModalHomework.id, studentId)
+            : undefined
+        }
+      />
     </div>
   )
 }

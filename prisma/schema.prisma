@@ -9,16 +9,26 @@ datasource db {
 }
 
 model Student {
-  id          String       @id @default(uuid())
-  userId      String       @default("legacy_user") // Will be required later
+  id          String        @id @default(uuid())
+  userId      String        @default("legacy_user")
   name        String
   parentName  String
   parentPhone String
   className   String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   submissions Submission[]
-  homeworks   Homework[]   @relation("HomeworkStudents")
+  homeworks   Homework[]    @relation("HomeworkStudents")
+  messages    SentMessage[]
+}
+
+model SentMessage {
+  id        String   @id @default(uuid())
+  studentId String
+  content   String
+  type      String   @default("WHATSAPP")
+  createdAt DateTime @default(now())
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model Homework {
@@ -32,6 +42,7 @@ model Homework {
   targetStudents String[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  subject        String       @default("GENEL")
   submissions    Submission[]
   students       Student[]    @relation("HomeworkStudents")
 }
@@ -52,7 +63,7 @@ model Submission {
 
 model UserProfile {
   id         String   @id @default(uuid())
-  userId     String   @unique // Supabase auth user ID
+  userId     String   @unique
   fullName   String?
   schoolName String?
   subject    String?

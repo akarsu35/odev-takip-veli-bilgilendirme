@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Student, Homework, HomeworkStatus } from '@/types'
 import { generateParentMessage } from '@/services/geminiService'
 
@@ -64,6 +64,14 @@ const STATUS_CONFIG: Record<
     textColor: 'text-purple-600',
     borderColor: 'border-purple-100',
   },
+  [HomeworkStatus.NOT_BROUGHT]: {
+    label: 'GETİRMEDİ',
+    icon: 'fas fa-box-open',
+    bgColor: 'bg-blue-600',
+    lightBg: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    borderColor: 'border-blue-100',
+  },
   [HomeworkStatus.PENDING]: {
     label: 'BEKLİYOR',
     icon: 'fas fa-clock',
@@ -92,6 +100,12 @@ const StudentHistory: React.FC<Props> = ({
   const [sortBy, setSortBy] = useState<'date' | 'status'>('date')
   const [expandedHwId, setExpandedHwId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Prevent SSR hydration mismatch
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const selectedStudent = useMemo(
     () => students.find((s) => s.id === selectedStudentId),
@@ -143,8 +157,9 @@ const StudentHistory: React.FC<Props> = ({
           [HomeworkStatus.MISSING]: 0,
           [HomeworkStatus.INCOMPLETE]: 1,
           [HomeworkStatus.ABSENT]: 2,
-          [HomeworkStatus.PENDING]: 3,
-          [HomeworkStatus.DONE]: 4,
+          [HomeworkStatus.NOT_BROUGHT]: 3,
+          [HomeworkStatus.PENDING]: 4,
+          [HomeworkStatus.DONE]: 5,
         }
         return order[a.studentStatus] - order[b.studentStatus]
       }
@@ -359,6 +374,17 @@ const StudentHistory: React.FC<Props> = ({
                   ).length
                 }
               />
+              <FilterButton
+                active={statusFilter === HomeworkStatus.NOT_BROUGHT}
+                onClick={() => setStatusFilter(HomeworkStatus.NOT_BROUGHT)}
+                label="Getirmedi"
+                color="bg-blue-500"
+                count={
+                  processedHomeworks.filter(
+                    (h) => h.studentStatus === HomeworkStatus.NOT_BROUGHT,
+                  ).length
+                }
+              />
             </div>
           </div>
 
@@ -380,7 +406,8 @@ const StudentHistory: React.FC<Props> = ({
                   hw.studentStatus === HomeworkStatus.DONE ||
                   hw.studentStatus === HomeworkStatus.MISSING ||
                   hw.studentStatus === HomeworkStatus.INCOMPLETE ||
-                  hw.studentStatus === HomeworkStatus.ABSENT
+                  hw.studentStatus === HomeworkStatus.ABSENT ||
+                  hw.studentStatus === HomeworkStatus.NOT_BROUGHT
 
                 return (
                   <div
@@ -401,9 +428,11 @@ const StudentHistory: React.FC<Props> = ({
                           {hw.title}
                         </h3>
                         <p className="text-xs text-slate-400 mt-1 uppercase font-black">
-                          {new Date(hw.assignedDate).toLocaleDateString(
-                            'tr-TR',
-                          )}
+                          {isMounted
+                            ? new Date(hw.assignedDate).toLocaleDateString(
+                                'tr-TR',
+                              )
+                            : hw.assignedDate.split('T')[0]}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 ml-2">
@@ -442,6 +471,7 @@ const StudentHistory: React.FC<Props> = ({
                                 HomeworkStatus.MISSING,
                                 HomeworkStatus.INCOMPLETE,
                                 HomeworkStatus.ABSENT,
+                                HomeworkStatus.NOT_BROUGHT,
                                 HomeworkStatus.PENDING,
                               ] as const
                             ).map((status) => {

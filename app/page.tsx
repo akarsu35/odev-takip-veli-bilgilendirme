@@ -14,10 +14,11 @@ import Settings from './components/Settings'
 import StudentHistory from './components/StudentHistory'
 import ProfileSetupModal from './components/ProfileSetupModal'
 import ProfileSettings from './components/ProfileSettings'
+import CustomMessagePanel from './components/CustomMessagePanel'
 
 const Page: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
-    'students' | 'homework' | 'check' | 'settings' | 'history'
+    'students' | 'homework' | 'check' | 'settings' | 'history' | 'messages'
   >('check')
 
   const router = useRouter()
@@ -87,11 +88,13 @@ const Page: React.FC = () => {
             !data.profile.schoolName &&
             !data.profile.subject)
         ) {
-          // Only show modal once per session
-          const hasSeenModal = sessionStorage.getItem('profileModalShown')
-          if (!hasSeenModal) {
-            setShowProfileModal(true)
-            sessionStorage.setItem('profileModalShown', 'true')
+          // Check sessionStorage only on client side
+          if (typeof window !== 'undefined') {
+            const hasSeenModal = sessionStorage.getItem('profileModalShown')
+            if (!hasSeenModal) {
+              setShowProfileModal(true)
+              sessionStorage.setItem('profileModalShown', 'true')
+            }
           }
         }
       }
@@ -141,13 +144,15 @@ const Page: React.FC = () => {
 
   useEffect(() => {
     if (!loading && isInitialized && !syncFailed) {
-      const savePromise = db.saveState({ students, homeworks })
+      const timeoutId = setTimeout(() => {
+        const savePromise = db.saveState({ students, homeworks })
 
-      savePromise.catch((e) => {
-        console.error('Auto-save failed', e)
-        // We only show error toast to not annoy the user with too many success toasts
-        // but we want to know if mobile sync fails.
-      })
+        savePromise.catch((e) => {
+          console.error('Auto-save failed', e)
+        })
+      }, 2000)
+
+      return () => clearTimeout(timeoutId)
     }
   }, [students, homeworks, loading, isInitialized, syncFailed])
 
@@ -321,10 +326,12 @@ const Page: React.FC = () => {
           <HomeworkManager
             homeworks={homeworks}
             students={students}
+            userProfile={userProfile}
             onAdd={addHomework}
             onDelete={deleteHomework}
             onUpdate={updateHomework}
             onUpdateStatus={updateSubmission}
+            onMarkNotified={markAsNotified}
           />
         )}
         {activeTab === 'check' && (
@@ -354,6 +361,9 @@ const Page: React.FC = () => {
             onMarkNotified={markAsNotified}
           />
         )}
+        {activeTab === 'messages' && (
+          <CustomMessagePanel students={students} userProfile={userProfile} />
+        )}
       </main>
 
       {/* Navigation Bar */}
@@ -381,6 +391,12 @@ const Page: React.FC = () => {
           icon="fas fa-chart-line"
           label="Gelişim"
           onClick={() => setActiveTab('history')}
+        />
+        <NavButton
+          active={activeTab === 'messages'}
+          icon="fas fa-paper-plane"
+          label="Mesajlar"
+          onClick={() => setActiveTab('messages')}
         />
         <NavButton
           active={activeTab === 'settings'}

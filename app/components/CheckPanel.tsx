@@ -142,6 +142,24 @@ const CheckPanel: React.FC<Props> = ({
 
     window.open(url, '_blank')
     onMarkNotified(selectedHwId, student.id)
+
+    // Save to database
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: student.id,
+          content: message,
+          type: 'HOMEWORK',
+          student: student,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to save message:', error)
+    }
   }
 
   if (students.length === 0) {
@@ -263,7 +281,8 @@ const CheckPanel: React.FC<Props> = ({
                   status === HomeworkStatus.DONE ||
                   status === HomeworkStatus.MISSING ||
                   status === HomeworkStatus.INCOMPLETE ||
-                  status === HomeworkStatus.ABSENT
+                  status === HomeworkStatus.ABSENT ||
+                  status === HomeworkStatus.NOT_BROUGHT
                 const isDone = status === HomeworkStatus.DONE
                 const isNotified =
                   selectedHw?.notifiedStudents?.[student.id] || false
@@ -392,6 +411,21 @@ const CheckPanel: React.FC<Props> = ({
                             status === HomeworkStatus.ABSENT
                               ? HomeworkStatus.PENDING
                               : HomeworkStatus.ABSENT,
+                          )
+                        }
+                      />
+                      <StatusButton
+                        label="Getirmedi"
+                        active={status === HomeworkStatus.NOT_BROUGHT}
+                        color="bg-blue-50 text-blue-600 border-blue-100"
+                        activeColor="bg-blue-600 text-white border-blue-600"
+                        onClick={() =>
+                          onUpdateStatus(
+                            selectedHwId,
+                            student.id,
+                            status === HomeworkStatus.NOT_BROUGHT
+                              ? HomeworkStatus.PENDING
+                              : HomeworkStatus.NOT_BROUGHT,
                           )
                         }
                       />

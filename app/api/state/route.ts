@@ -1,3 +1,5 @@
+// Hata ayıklama için geliştirilmiş error logging
+
 import { NextResponse } from 'next/server'
 import { getPrisma } from '@/services/prisma'
 import { createClient } from '@/utils/supabase/server'
@@ -69,36 +71,68 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  let state
+  try {
+    state = await req.json()
+  } catch (parseError: any) {
+    console.error('POST /api/state - JSON parse error:', parseError)
+    return NextResponse.json(
+      { error: `JSON parse hatası: ${parseError.message}` },
+      { status: 400 },
+    )
+  }
+
+  // CRITICAL: Prevent accidental data deletion
+  // If the incoming state is empty or missing required fields, reject it
+  if (!state || typeof state !== 'object') {
+    console.error('POST /api/state - Invalid state object:', state)
+    return NextResponse.json(
+      { error: 'Geçersiz veri formatı' },
+      { status: 400 },
+    )
+  }
+
+  // Allow empty arrays, but log a warning for safety
+  const students = state.students || []
+  const homeworks = state.homeworks || []
+
+  if (students.length === 0 && homeworks.length === 0) {
+    console.warn(
+      'POST /api/state - Received empty state, this will delete all data!',
+    )
+    // Still allow it, but make it very obvious in logs
+  }
+
   const p = await getPrisma()
   try {
-    const state = await req.json()
-    const students = state.students || []
+    console.log(`Saving state for user ${user.id}:`, {
+      studentCount: students.length,
+      homeworkCount: (state.homeworks || []).length,
+    })
 
-    // Safety check: ensure we don't accidentally take IDs from other users if UUID collision (unlikely)
-    // but mainly ensure we are Operating on the User's Scope.
+    const startTime = Date.now()
 
     // Transaction for atomic update
     await p.$transaction(
       async (tx) => {
         // 1. Sync Students
-        // Get existing IDs for this user to know what to delete
         const existingStudents = await tx.student.findMany({
           where: { userId: user.id },
           select: { id: true },
         })
         const existingStudentIds = existingStudents.map((s) => s.id)
-
         const incomingStudentIds = students.map((s: any) => s.id)
 
-        // Delete students not in incoming list (but only for THIS user)
+        // Delete students not in incoming list
         const studentsToDelete = existingStudentIds.filter(
           (id) => !incomingStudentIds.includes(id),
         )
         if (studentsToDelete.length > 0) {
+          console.log(`Deleting ${studentsToDelete.length} students`)
           await tx.student.deleteMany({
             where: {
               id: { in: studentsToDelete },
-              userId: user.id, // Redundant if IDs are unique, but good for safety
+              userId: user.id,
             },
           })
         }
@@ -117,9 +151,6 @@ export async function POST(req: Request) {
                 className: s.className,
               },
               update: {
-                // Ensure we don't overwrite userId or allow claiming other's student if ID leaked (though ID is UUID)
-                // Since 'where' is unique ID, if it exists, it updates.
-                // We should ideally check ownership. But for simplicity in this atomic sync:
                 name: s.name,
                 parentName: s.parentName,
                 parentPhone: s.parentPhone,
@@ -143,6 +174,7 @@ export async function POST(req: Request) {
           (id) => !incomingHomeworkIds.includes(id),
         )
         if (homeworksToDelete.length > 0) {
+          console.log(`Deleting ${homeworksToDelete.length} homeworks`)
           await tx.homework.deleteMany({
             where: {
               id: { in: homeworksToDelete },
@@ -152,60 +184,69 @@ export async function POST(req: Request) {
         }
 
         for (const hw of state.homeworks || []) {
-          const upserted = await tx.homework.upsert({
-            where: { id: hw.id },
-            create: {
-              id: hw.id,
-              userId: user.id,
-              title: hw.title,
-              description: hw.description,
-              assignedDate: new Date(hw.assignedDate),
-              dueDate: new Date(hw.dueDate),
-              targetClasses: hw.targetClasses || [],
-              targetStudents: hw.targetStudentIds || [],
-            },
-            update: {
-              title: hw.title,
-              description: hw.description,
-              assignedDate: new Date(hw.assignedDate),
-              dueDate: new Date(hw.dueDate),
-              targetClasses: hw.targetClasses || [],
-              targetStudents: hw.targetStudentIds || [],
-            },
-          })
-
-          // Clear existing submissions for this homework
-          // Submissions don't strictly need userId if they are child of Homework,
-          // but if we added userId to Submission, we sets it here.
-          // Current schema: Submission linked to Homework + Student.
-          await tx.submission.deleteMany({
-            where: { homeworkId: upserted.id },
-          })
-
-          const submissions = Object.entries(hw.submissions || {}).map(
-            ([studentId, status]) => ({
-              studentId,
-              homeworkId: upserted.id,
-              status: status as string,
-              isNotified: hw.notifiedStudents?.[studentId] || false,
-            }),
-          )
-
-          if (submissions.length > 0) {
-            await tx.submission.createMany({
-              data: submissions,
+          try {
+            const upserted = await tx.homework.upsert({
+              where: { id: hw.id },
+              create: {
+                id: hw.id,
+                userId: user.id,
+                title: hw.title,
+                description: hw.description,
+                assignedDate: new Date(hw.assignedDate),
+                dueDate: new Date(hw.dueDate),
+                targetClasses: hw.targetClasses || [],
+                targetStudents: hw.targetStudentIds || [],
+              },
+              update: {
+                title: hw.title,
+                description: hw.description,
+                assignedDate: new Date(hw.assignedDate),
+                dueDate: new Date(hw.dueDate),
+                targetClasses: hw.targetClasses || [],
+                targetStudents: hw.targetStudentIds || [],
+              },
             })
+
+            // Clear existing submissions for this homework
+            await tx.submission.deleteMany({
+              where: { homeworkId: upserted.id },
+            })
+
+            const submissions = Object.entries(hw.submissions || {}).map(
+              ([studentId, status]) => ({
+                studentId,
+                homeworkId: upserted.id,
+                status: status as string,
+                isNotified: hw.notifiedStudents?.[studentId] || false,
+              }),
+            )
+
+            if (submissions.length > 0) {
+              await tx.submission.createMany({
+                data: submissions,
+              })
+            }
+          } catch (hwError: any) {
+            console.error(`Error saving homework ${hw.id}:`, hwError)
+            throw new Error(
+              `Ödev kaydedilemedi (${hw.title}): ${hwError.message}`,
+            )
           }
         }
       },
       {
-        timeout: 30000,
+        timeout: 60000,
       },
     )
 
-    return NextResponse.json({ ok: true })
+    const duration = Date.now() - startTime
+    console.log(`State saved successfully in ${duration}ms`)
+    return NextResponse.json({ ok: true, duration })
   } catch (e: any) {
-    console.error('POST /api/state failed', e)
+    console.error('POST /api/state failed:', {
+      message: e.message,
+      stack: e.stack?.split('\n').slice(0, 3).join('\n'),
+    })
     return NextResponse.json(
       { error: `Veritabanı hatası: ${e.message || 'Kayıt başarısız.'}` },
       { status: 500 },

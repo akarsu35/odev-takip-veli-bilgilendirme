@@ -21,9 +21,9 @@ const createPrismaClient = () => {
     const pool = new pg.Pool({
       connectionString: dbUrl,
       ssl: isSupabase ? { rejectUnauthorized: false } : false,
-      max: 1,
+      max: 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: 20000,
     })
 
     const adapter = new PrismaPg(pool)

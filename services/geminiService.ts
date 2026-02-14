@@ -22,6 +22,11 @@ function fallbackParentMessage(
     return `Sayın Velimiz, bugünkü dersimize ${studentName} gelmediği için "${homeworkTitle}" konulu ödevini kontrol edemedim. Öğrencimizin ödevini en kısa sürede ulaştırması dileğiyle, İlginiz için teşekkürler, iyi günler dilerim.${signature}`
   }
 
+  // Getirmedi (NOT_BROUGHT) durumu için özel mesaj
+  if (status === 'NOT_BROUGHT') {
+    return `Sayın Velimiz, ${studentName} bugünkü dersimize geldi ancak "${homeworkTitle}" konulu ödevini yanında getirmediği için kontrol edemedim. Ödevlerin zamanında ve düzenli olarak takip edilmesi öğrenme sürecinin devamlılığı açısından büyük önem taşımaktadır. ${studentName}'in ödevini en kısa sürede getirmesi konusunda desteğinizi rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+  }
+
   const detailText =
     status === 'MISSING'
       ? 'ödevin tamamlanması'
@@ -37,6 +42,50 @@ function fallbackParentMessage(
 
   // Normal durum mesajları
   return `Sayın Velimiz, ${studentName}'in "${homeworkTitle}" isimli ödevini kontrol ettiğimde ${statusText} fark ettim. Konunun tam olarak pekişmesi ve öğrenme sürecinin aksamaması adına ${detailText} konusunda ${studentName}'e destek olmanızı rica ederim. İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+}
+
+export function generateHomeworkAssignmentMessage(
+  studentName: string,
+  homeworkTitle: string,
+  homeworkDescription: string,
+  assignedDate: string,
+  dueDate: string,
+  schoolName?: string,
+  teacherStatus?: string,
+  userName?: string,
+): string {
+  const signature =
+    schoolName || teacherStatus || userName
+      ? `\n\n${schoolName || ''}-${teacherStatus || ''}-${userName || ''}`
+      : ''
+
+  // Format dates in Turkish locale
+  const formattedAssignedDate = new Date(assignedDate).toLocaleDateString(
+    'tr-TR',
+    {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    },
+  )
+
+  const formattedDueDate = new Date(dueDate).toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  let message = `Sayın Velimiz,\n\n${formattedAssignedDate} tarihinde "${homeworkTitle}" konulu ödev verilmiştir.\n\n`
+
+  if (homeworkDescription) {
+    message += `📝 Ödev Detayları:\n${homeworkDescription}\n\n`
+  }
+
+  message += `📅 Kontrol Tarihi: ${formattedDueDate}\n\n`
+  message += `${studentName}'in ödevini özenle ve eksiksiz yapması konusunda desteğinizi rica ediyorum. Ödevlerimiz konuların pekişmesi için büyük önem taşımaktadır.\n\n`
+  message += `İlginiz için teşekkürler, iyi günler dilerim.${signature}`
+
+  return message
 }
 
 export async function generateParentMessage(

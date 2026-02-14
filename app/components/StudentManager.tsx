@@ -125,21 +125,8 @@ const StudentManager: React.FC<Props> = ({
 
         // Add to app state and perform a bulk sync to server
         if (newStudents.length > 0) {
+          // Add to app state - Page.tsx will handle the auto-save via useEffect
           newStudents.forEach((s) => onAdd(s))
-
-          // Attempt to sync: load existing state to keep homeworks
-          ;(async () => {
-            try {
-              const current = await db.loadState()
-              const merged = {
-                students: [...(current.students || []), ...newStudents],
-                homeworks: current.homeworks || [],
-              }
-              await db.saveState(merged)
-            } catch (err) {
-              console.error('Bulk sync after Excel import failed', err)
-            }
-          })()
           toast.success(`${newStudents.length} öğrenci başarıyla aktarıldı!`, {
             id: toastId,
           })

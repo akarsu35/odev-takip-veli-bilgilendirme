@@ -57,6 +57,15 @@ const STATUS_CONFIG = {
     borderColor: 'border-purple-200',
     emoji: '📦',
   },
+  NOT_BROUGHT: {
+    label: 'Getirmedi',
+    icon: 'fas fa-box-open',
+    bgColor: 'bg-blue-500',
+    lightBg: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    borderColor: 'border-blue-200',
+    emoji: '📪',
+  },
   DONE: {
     label: 'Tamamladı',
     icon: 'fas fa-check',
@@ -352,7 +361,8 @@ const StatusFilterView: React.FC<Props> = ({
                     status === HomeworkStatus.DONE ||
                     status === HomeworkStatus.MISSING ||
                     status === HomeworkStatus.INCOMPLETE ||
-                    status === HomeworkStatus.ABSENT
+                    status === HomeworkStatus.ABSENT ||
+                    status === HomeworkStatus.NOT_BROUGHT
 
                   return (
                     <div
@@ -411,6 +421,7 @@ const StatusFilterView: React.FC<Props> = ({
                             'MISSING',
                             'INCOMPLETE',
                             'ABSENT',
+                            'NOT_BROUGHT',
                             'PENDING',
                           ] as const
                         ).map((s) => {
