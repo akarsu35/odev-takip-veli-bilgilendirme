@@ -9,7 +9,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-15.1-black?style=for-the-badge&logo=next.js" alt="Next.js">
   <img src="https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-5.8-blue?style=for-the-badge&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Zustand-State-orange?style=for-the-badge" alt="Zustand">
   <img src="https://img.shields.io/badge/Prisma-6.19-2D3748?style=for-the-badge&logo=prisma" alt="Prisma">
   <img src="https://img.shields.io/badge/Supabase-Auth-green?style=for-the-badge&logo=supabase" alt="Supabase">
 </p>
@@ -22,48 +22,37 @@
 
 ### 📋 Ödev Yönetimi
 
-- **Ödev Oluşturma**: Sınıf veya öğrenci bazlı ödev atama
-- **Durum Takibi**: Ödevlerin tamamlanma durumunu izleme (Yapıldı, Eksik, Yapılmadı, Gelmedi)
-- **Toplu İşlemler**: Birden fazla öğrenciyi aynı anda işaretleme
+- **Ödev Oluşturma**: Sınıf veya öğrenci bazlı ödev atama.
+- **Durum Takibi**: Ödevlerin tamamlanma durumunu izleme (Yapıldı, Eksik, Yapılmadı, Gelmedi, Getirmedi).
+- **Toplu İşlemler**: Birden fazla öğrenciyi aynı anda işaretleme ve toplu bildirim.
+- **Akıllı Analiz**: Ödev bazlı başarı ve katılım istatistikleri.
 
 ### 👨‍🎓 Öğrenci Yönetimi
 
-- **Öğrenci Ekleme**: Tek tek veya Excel ile toplu öğrenci ekleme
-- **Sınıf Bazlı Organizasyon**: Öğrencileri sınıflara göre gruplama
-- **Devamsızlık Takibi**: Katılım ve devamsızlık sayılarını görüntüleme
-- **Geçmiş Görüntüleme**: Her öğrencinin ödev geçmişini detaylı inceleme
+- **Öğrenci Ekleme**: Tek tek veya Excel ile toplu öğrenci ekleme.
+- **Gelişim Takibi**: Her öğrencinin tüm ödev geçmişini gösteren detaylı gelişim sayfası.
+- **Hızlı Arama**: İsim, sınıf veya veli adına göre anlık filtreleme.
 
 ### 📱 Otomatik Veli Bilgilendirme
 
-- **WhatsApp Entegrasyonu**: Tek tıkla veli mesajı gönderme
-- **Kişiselleştirilmiş Mesajlar**: Öğretmen profil bilgileriyle zenginleştirilmiş mesajlar
-- **Tekrar Bildirim**: Daha önce bildirilmiş ödevler için hatırlatma mesajı
-- **Devamsızlık Bildirimi**: Derse katılmayan öğrenciler için otomatik mesaj
-
-### 🔐 Kimlik Doğrulama
-
-- **Google OAuth**: Google hesabıyla kolay giriş
-- **E-posta/Şifre**: Geleneksel e-posta ile kayıt ve giriş
-- **Güvenli Oturum**: Supabase Auth ile güvenli oturum yönetimi
-
-### 👤 Profil Yönetimi
-
-- **Öğretmen Profili**: İsim, okul adı ve branş bilgisi ekleme
-- **Kişiselleştirme**: Veli mesajlarında profil bilgilerinin kullanılması
+- **WhatsApp Entegrasyonu**: Tek tıkla kişiye özel mesaj gönderme.
+- **Yapay Zeka (AI) Desteği**: Gemini AI ile ödev açıklamaları ve veli mesajları üretme.
+- **Mesaj Geçmişi**: Gönderilen tüm mesajların kaydını tutma ve öğrenci bazlı listeleme.
+- **Kişiselleştirilmiş İmzalar**: Öğretmen branş ve okul bilgilerini otomatik ekleme.
 
 ---
 
 ## 🛠️ Teknolojiler
 
-| Teknoloji            | Açıklama                                |
-| -------------------- | --------------------------------------- |
-| **Next.js 15**       | React tabanlı full-stack framework      |
-| **React 19**         | Modern UI kütüphanesi                   |
-| **TypeScript**       | Tip güvenli JavaScript                  |
-| **Tailwind CSS**     | Utility-first CSS framework             |
-| **Prisma**           | Modern ORM                              |
-| **Supabase**         | PostgreSQL veritabanı ve Authentication |
-| **Google Gemini AI** | Akıllı mesaj önerileri (opsiyonel)      |
+| Teknoloji                   | Açıklama                                       |
+| :-------------------------- | :--------------------------------------------- |
+| **Next.js 15 (App Router)** | Modern full-stack Web Framework                |
+| **React 19**                | Modern UI kütüphanesi                          |
+| **Zustand**                 | Hafif ve performanslı state yönetimi           |
+| **Prisma & PostgreSQL**     | Tip güvenli veritabanı erişimi (Supabase/Neon) |
+| **Tailwind CSS**            | Modern ve responsive tasarım                   |
+| **Supabase Auth**           | Güvenli kimlik doğrulama sistemi               |
+| **Google Gemini AI**        | Yapay zeka destekli içerik üretimi             |
 
 ---
 
@@ -125,50 +114,37 @@ Uygulama `http://localhost:3000` adresinde çalışacaktır.
 
 ### İlk Kullanım
 
-1. Google hesabınızla veya e-posta ile giriş yapın
-2. Profil bilgilerinizi (isim, okul, branş) doldurun
-3. Öğrencilerinizi ekleyin (tek tek veya Excel ile)
-4. Ödev oluşturun ve sınıfları/öğrencileri seçin
+1. Google hesabınızla veya e-posta ile giriş yapın.
+2. Profil bilgilerinizi (isim, okul, branş) doldurun.
+3. Öğrencilerinizi ekleyin (tek tek veya Excel ile).
+4. Ödev oluşturun ve sınıfları/öğrencileri seçin.
 
 ### Ödev Kontrolü
 
-1. Ana sayfadan kontrol edeceğiniz ödevi seçin
-2. Her öğrenci için durumu işaretleyin (✓ Yapıldı, ○ Eksik, ✕ Yapılmadı, - Gelmedi)
-3. Eksik veya yapılmamış ödevler için "Bildir" butonuna tıklayın
-4. WhatsApp otomatik olarak açılır ve mesaj hazır olur
-
-### Excel ile Öğrenci Ekleme
-
-Excel dosyanız şu sütunları içermelidir:
-
-- **A Sütunu**: Öğrenci Adı
-- **B Sütunu**: Veli Adı
-- **C Sütunu**: Telefon Numarası
-- **D Sütunu**: Sınıf
+1. Ana sayfadan kontrol edeceğiniz ödevi seçin.
+2. Her öğrenci için durumu işaretleyin (Tamam, Yapılmadı, Eksik, Gelmedi, Getirmedi).
+3. Bildirim göndermek istediğiniz öğrenci için WhatsApp ikonuna tıklayın.
+4. Mesaj geçmişinden daha önce gönderilen bildirimleri takip edin.
 
 ---
 
 ## 📁 Proje Yapısı
 
-```
+```bash
 ├── app/
-│   ├── api/              # API routes
-│   ├── auth/             # Auth callback
-│   ├── components/       # React components
-│   │   ├── CheckPanel.tsx       # Ödev kontrol paneli
-│   │   ├── HomeworkManager.tsx  # Ödev yönetimi
-│   │   ├── StudentManager.tsx   # Öğrenci yönetimi
-│   │   ├── StudentHistory.tsx   # Öğrenci geçmişi
-│   │   └── ProfileSettings.tsx  # Profil ayarları
-│   ├── login/            # Giriş sayfası
-│   └── page.tsx          # Ana sayfa
-├── prisma/
-│   └── schema.prisma     # Veritabanı şeması
-├── services/
-│   ├── db.ts             # Veritabanı işlemleri
-│   └── geminiService.ts  # AI mesaj servisi
-└── utils/
-    └── supabase/         # Supabase client yapılandırması
+│   ├── api/              # API rotaları (state, student, homework, messages)
+│   ├── components/       # Ana bileşenler
+│   │   ├── messages/     # Mesajlaşma modülü (Composer, History, Groups)
+│   │   ├── HomeworkManager.tsx # Ödev yönetimi
+│   │   └── ...           # Diğer modüller
+│   └── (routes)/         # Sayfa rotaları
+├── components/
+│   └── ui/               # Standardize edilmiş UI kütüphanesi (Card, Button, Input)
+├── hooks/                # Özel React hook'ları (useAppState vb.)
+├── store/                # Zustand global store tanımları
+├── lib/                  # Yardımcı fonksiyonlar (utils, cn helper)
+├── prisma/               # Veritabanı şeması ve migrasyonlar
+└── services/             # Dış servis entegrasyonları (DB, Gemini, WhatsApp)
 ```
 
 ---
