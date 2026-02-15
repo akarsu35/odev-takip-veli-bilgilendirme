@@ -502,7 +502,7 @@ const StudentHistory: React.FC<Props> = ({
                                   className={cn(
                                     'h-10 rounded-xl flex items-center justify-center transition-all border',
                                     isActive
-                                      ? `${sCfg.bgColor} text-white border-transparent shadow-lg scale-110 z-10`
+                                      ? `${sCfg.lightBg} ${sCfg.textColor} ${sCfg.borderColor} shadow-sm scale-105 z-10`
                                       : `bg-slate-50 ${sCfg.textColor} border-slate-100 hover:${sCfg.hoverBg}`,
                                   )}
                                   title={sCfg.label}
@@ -591,6 +591,92 @@ const StudentHistory: React.FC<Props> = ({
   )
 }
 
+const COLOR_VARIANTS: Record<
+  string,
+  {
+    bg: string
+    text: string
+    hover: string
+    lightBg: string
+    iconText: string
+    fadedText: string
+    borderColor: string
+  }
+> = {
+  indigo: {
+    bg: 'bg-indigo-500',
+    text: 'text-indigo-600',
+    hover: 'hover:bg-indigo-50',
+    lightBg: 'bg-indigo-50',
+    iconText: 'text-indigo-600',
+    fadedText: 'text-indigo-700',
+    borderColor: 'border-indigo-200',
+  },
+  emerald: {
+    bg: 'bg-emerald-500',
+    text: 'text-emerald-600',
+    hover: 'hover:bg-emerald-50',
+    lightBg: 'bg-emerald-50',
+    iconText: 'text-emerald-600',
+    fadedText: 'text-emerald-700',
+    borderColor: 'border-emerald-200',
+  },
+  rose: {
+    bg: 'bg-rose-500',
+    text: 'text-rose-600',
+    hover: 'hover:bg-rose-50',
+    lightBg: 'bg-rose-50',
+    iconText: 'text-rose-600',
+    fadedText: 'text-rose-700',
+    borderColor: 'border-rose-200',
+  },
+  amber: {
+    bg: 'bg-amber-500',
+    text: 'text-amber-600',
+    hover: 'hover:bg-amber-50',
+    lightBg: 'bg-amber-50',
+    iconText: 'text-amber-600',
+    fadedText: 'text-amber-700',
+    borderColor: 'border-amber-200',
+  },
+  violet: {
+    bg: 'bg-violet-500',
+    text: 'text-violet-600',
+    hover: 'hover:bg-violet-50',
+    lightBg: 'bg-violet-50',
+    iconText: 'text-violet-600',
+    fadedText: 'text-violet-700',
+    borderColor: 'border-violet-200',
+  },
+  blue: {
+    bg: 'bg-blue-500',
+    text: 'text-blue-600',
+    hover: 'hover:bg-blue-50',
+    lightBg: 'bg-blue-50',
+    iconText: 'text-blue-600',
+    fadedText: 'text-blue-700',
+    borderColor: 'border-blue-200',
+  },
+  slate: {
+    bg: 'bg-slate-500',
+    text: 'text-slate-600',
+    hover: 'hover:bg-slate-50',
+    lightBg: 'bg-slate-50',
+    iconText: 'text-slate-600',
+    fadedText: 'text-slate-700',
+    borderColor: 'border-slate-200',
+  },
+  orange: {
+    bg: 'bg-orange-500',
+    text: 'text-orange-600',
+    hover: 'hover:bg-orange-50',
+    lightBg: 'bg-orange-50',
+    iconText: 'text-orange-600',
+    fadedText: 'text-orange-700',
+    borderColor: 'border-orange-200',
+  },
+}
+
 const FilterButton: React.FC<{
   active: boolean
   onClick: () => void
@@ -598,9 +684,7 @@ const FilterButton: React.FC<{
   color: string
   count: number
 }> = ({ active, onClick, label, color, count }) => {
-  const bgClass = `bg-${color}-500`
-  const textClass = `text-${color}-600`
-  const hoverClass = `hover:bg-${color}-50`
+  const styles = COLOR_VARIANTS[color] || COLOR_VARIANTS.indigo
 
   return (
     <button
@@ -608,8 +692,8 @@ const FilterButton: React.FC<{
       className={cn(
         'flex items-center gap-3 px-4 py-2.5 rounded-2xl border-2 transition-all whitespace-nowrap shadow-sm group',
         active
-          ? `border-transparent ${bgClass} text-white shadow-lg scale-105 z-10`
-          : `border-slate-100 bg-white text-slate-500 hover:border-slate-200 ${hoverClass}`,
+          ? `${styles.borderColor} ${styles.lightBg} ${styles.text} shadow-md scale-105 z-10`
+          : `border-slate-100 bg-white text-slate-500 hover:border-slate-200 ${styles.hover}`,
       )}
     >
       <span className="text-[10px] font-black uppercase tracking-wider">
@@ -619,7 +703,7 @@ const FilterButton: React.FC<{
         className={cn(
           'text-[10px] font-black px-2 py-0.5 rounded-lg transition-colors min-w-[24px]',
           active
-            ? 'bg-white/20 text-white'
+            ? 'bg-white/50 text-current mix-blend-multiply'
             : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200',
         )}
       >
@@ -634,37 +718,41 @@ const StatCard: React.FC<{
   value: string | number
   icon: string
   color: string
-}> = ({ label, value, icon, color }) => (
-  <Card className="border-none shadow-sm overflow-hidden group">
-    <CardContent className={cn('p-4 text-center relative', `bg-${color}-50`)}>
-      <div
-        className={cn(
-          'text-xl mb-1 group-hover:scale-125 transition-transform',
-          `text-${color}-600`,
-        )}
-      >
-        <i className={cn('fas', icon)}></i>
-      </div>
-      <div className="text-xl font-black text-slate-900 leading-tight">
-        {value}
-      </div>
-      <div
-        className={cn(
-          'text-[9px] font-black uppercase tracking-[0.2em] opacity-80',
-          `text-${color}-700`,
-        )}
-      >
-        {label}
-      </div>
-      <i
-        className={cn(
-          'fas',
-          icon,
-          'absolute -right-2 -bottom-2 text-4xl opacity-[0.03] group-hover:scale-150 transition-transform',
-        )}
-      ></i>
-    </CardContent>
-  </Card>
-)
+}> = ({ label, value, icon, color }) => {
+  const styles = COLOR_VARIANTS[color] || COLOR_VARIANTS.indigo
+
+  return (
+    <Card className="border-none shadow-sm overflow-hidden group">
+      <CardContent className={cn('p-4 text-center relative', styles.lightBg)}>
+        <div
+          className={cn(
+            'text-xl mb-1 group-hover:scale-125 transition-transform',
+            styles.iconText,
+          )}
+        >
+          <i className={cn('fas', icon)}></i>
+        </div>
+        <div className="text-xl font-black text-slate-900 leading-tight">
+          {value}
+        </div>
+        <div
+          className={cn(
+            'text-[9px] font-black uppercase tracking-[0.2em] opacity-80',
+            styles.fadedText,
+          )}
+        >
+          {label}
+        </div>
+        <i
+          className={cn(
+            'fas',
+            icon,
+            'absolute -right-2 -bottom-2 text-4xl opacity-[0.03] group-hover:scale-150 transition-transform',
+          )}
+        ></i>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default StudentHistory
