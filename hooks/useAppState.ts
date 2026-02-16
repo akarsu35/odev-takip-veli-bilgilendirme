@@ -15,14 +15,34 @@ export function useSyncState() {
   const { data, isLoading, error } = useQuery({
     queryKey: APP_STATE_KEY,
     queryFn: () => db.loadState(),
-    staleTime: Infinity, // Only fetch once on mount, then rely on local mutations
+    staleTime: Infinity,
   })
+
+  // Track if state has been modified by user
+  const isDirty = useRef(false)
+  const previousStudentsLen = useRef(0)
+  const previousHomeworksLen = useRef(0)
+
+  // Detect changes
+  useEffect(() => {
+    if (isInitialized) {
+      if (
+        students.length !== previousStudentsLen.current ||
+        homeworks.length !== previousHomeworksLen.current
+      ) {
+        isDirty.current = true
+      }
+      // Shallow check for content changes could be added here for more precision
+    }
+    previousStudentsLen.current = students.length
+    previousHomeworksLen.current = homeworks.length
+  }, [students, homeworks, isInitialized])
 
   // 2. Load into Store (Once)
   useEffect(() => {
     if (data && isInitialLoad.current) {
-      // Basic migration logic if needed (similar to old page.tsx)
-      const migratedHomeworks = (data.homeworks || []).map((hw: any) => {
+      // Basic migration logic
+      const migratedHomeworks = (data.data.homeworks || []).map((hw: any) => {
         if (hw.targetClass && !hw.targetClasses) {
           const { targetClass, ...rest } = hw
           return { ...rest, targetClasses: [targetClass] }
@@ -30,29 +50,42 @@ export function useSyncState() {
         return hw
       })
 
-      setStudents(data.students || [])
+      setStudents(data.data.students || [])
       setHomeworks(migratedHomeworks)
       setIsInitialized(true)
+
+      // If loaded from local storage, mark as NOT dirty to prevent overwriting server
+      // unless user explicitly changes something.
+      if (data.source === 'local') {
+        console.warn(
+          'Loaded from local storage - Auto-save disabled until change detected',
+        )
+      }
+
       isInitialLoad.current = false
     }
   }, [data, setStudents, setHomeworks])
 
-  // 3. Auto-Save Logic
-  // We debounce the save operation
+  // 3. Auto-Save Logic - REMOVED for performance
+  // We now use granular updates for all actions (add/update/delete student/homework + submissions)
+  // This prevents the heavy full-state save on every small change.
+  /*
   useEffect(() => {
     if (!isInitialized) return
 
     const timeoutId = setTimeout(() => {
-      // Only save if we have data (prevent saving empty state over existing data on rare race conditions)
-      if (students.length > 0 || homeworks.length > 0) {
-        db.saveState({ students, homeworks }).catch((err) => {
-          console.error('Auto-save failed:', err)
-        })
+      const shouldSave =
+        (data?.source === 'server' || isDirty.current) &&
+        (students.length > 0 || homeworks.length > 0)
+
+      if (shouldSave) {
+        // db.saveState({ students, homeworks })
       }
     }, 2000)
 
     return () => clearTimeout(timeoutId)
-  }, [students, homeworks, isInitialized])
+  }, [students, homeworks, isInitialized, data?.source])
+  */
 
   return { isLoading, isInitialized, error }
 }

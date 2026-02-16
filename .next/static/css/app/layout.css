@@ -553,6 +553,12 @@ video {
 .top-\[72px\] {
   top: 72px;
 }
+.bottom-4 {
+  bottom: 1rem;
+}
+.right-4 {
+  right: 1rem;
+}
 .z-10 {
   z-index: 10;
 }
@@ -879,6 +885,9 @@ video {
 .cursor-pointer {
   cursor: pointer;
 }
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
 .select-none {
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -1131,6 +1140,10 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(79 70 229 / var(--tw-border-opacity, 1));
 }
+.border-orange-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(254 215 170 / var(--tw-border-opacity, 1));
+}
 .border-purple-100 {
   --tw-border-opacity: 1;
   border-color: rgb(243 232 255 / var(--tw-border-opacity, 1));
@@ -1174,20 +1187,16 @@ video {
 .border-transparent {
   border-color: transparent;
 }
+.border-violet-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(221 214 254 / var(--tw-border-opacity, 1));
+}
 .border-white {
   --tw-border-opacity: 1;
   border-color: rgb(255 255 255 / var(--tw-border-opacity, 1));
 }
 .border-white\/10 {
   border-color: rgb(255 255 255 / 0.1);
-}
-.border-orange-200 {
-  --tw-border-opacity: 1;
-  border-color: rgb(254 215 170 / var(--tw-border-opacity, 1));
-}
-.border-violet-200 {
-  --tw-border-opacity: 1;
-  border-color: rgb(221 214 254 / var(--tw-border-opacity, 1));
 }
 .border-l-transparent {
   border-left-color: transparent;
@@ -1378,14 +1387,15 @@ video {
 .bg-white\/10 {
   background-color: rgb(255 255 255 / 0.1);
 }
-.bg-white\/20 {
-  background-color: rgb(255 255 255 / 0.2);
-}
 .bg-white\/5 {
   background-color: rgb(255 255 255 / 0.05);
 }
 .bg-white\/50 {
   background-color: rgb(255 255 255 / 0.5);
+}
+.bg-red-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(220 38 38 / var(--tw-bg-opacity, 1));
 }
 .bg-gradient-to-br {
   background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
@@ -1707,6 +1717,9 @@ video {
   --tw-text-opacity: 1;
   color: rgb(29 78 216 / var(--tw-text-opacity, 1));
 }
+.text-current {
+  color: currentColor;
+}
 .text-emerald-500 {
   --tw-text-opacity: 1;
   color: rgb(16 185 129 / var(--tw-text-opacity, 1));
@@ -1837,9 +1850,6 @@ video {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
-}
-.text-current {
-  color: currentColor;
 }
 .underline-offset-4 {
   text-underline-offset: 4px;

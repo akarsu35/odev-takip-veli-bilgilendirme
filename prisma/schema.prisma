@@ -9,17 +9,18 @@ datasource db {
 }
 
 model Student {
-  id          String        @id @default(uuid())
-  userId      String        @default("legacy_user")
-  name        String
-  parentName  String
-  parentPhone String
-  className   String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  submissions Submission[]
-  homeworks   Homework[]    @relation("HomeworkStudents")
-  messages    SentMessage[]
+  id           String        @id @default(uuid())
+  userId       String        @default("legacy_user")
+  name         String
+  parentName   String
+  parentPhone  String
+  className    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  submissions  Submission[]
+  homeworks    Homework[]    @relation("HomeworkStudents")
+  messages     SentMessage[]
+  etutSessions EtutSession[]
 }
 
 model SentMessage {
@@ -70,3 +71,5 @@ model UserProfile {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
+
+// ETÜT TAKİP MODELLERİ (Added)

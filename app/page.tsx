@@ -14,6 +14,7 @@ import StudentHistory from './components/StudentHistory'
 import ProfileSetupModal from './components/ProfileSetupModal'
 import ProfileSettings from './components/ProfileSettings'
 import CustomMessagePanel from './components/CustomMessagePanel'
+import SyncStatus from './components/SyncStatus'
 
 import { useStore } from '@/store/useStore'
 import { useSyncState } from '@/hooks/useAppState'
@@ -320,6 +321,7 @@ const Page: React.FC = () => {
           onClick={() => setActiveTab('settings')}
         />
       </nav>
+      <SyncStatus />
     </div>
   )
 }

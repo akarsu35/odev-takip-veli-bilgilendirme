@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { useStore } from '@/store/useStore'
 
 interface Props {
   students: Student[]
@@ -35,6 +36,7 @@ const CheckPanel: React.FC<Props> = ({
   onUpdateStatus,
   onMarkNotified,
 }) => {
+  const { pendingOperations } = useStore()
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [selectedHwId, setSelectedHwId] = useState<string>('')
   const [isLoading, setIsLoading] = useState<string | null>(null)
@@ -366,60 +368,69 @@ const CheckPanel: React.FC<Props> = ({
                       </div>
 
                       <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                        {[
-                          {
-                            label: 'Tamam',
-                            status: HomeworkStatus.DONE,
-                            color:
-                              'bg-emerald-50 text-emerald-600 border-emerald-100',
-                            active:
-                              'bg-emerald-600 text-white border-emerald-600',
-                          },
-                          {
-                            label: 'Yapmadı',
-                            status: HomeworkStatus.MISSING,
-                            color: 'bg-rose-50 text-rose-600 border-rose-100',
-                            active: 'bg-rose-600 text-white border-rose-600',
-                          },
-                          {
-                            label: 'Eksik',
-                            status: HomeworkStatus.INCOMPLETE,
-                            color:
-                              'bg-amber-50 text-amber-600 border-amber-100',
-                            active: 'bg-amber-600 text-white border-amber-600',
-                          },
-                          {
-                            label: 'Gelmedi',
-                            status: HomeworkStatus.ABSENT,
-                            color:
-                              'bg-purple-50 text-purple-600 border-purple-100',
-                            active:
-                              'bg-purple-600 text-white border-purple-600',
-                          },
-                          {
-                            label: 'Getirmedi',
-                            status: HomeworkStatus.NOT_BROUGHT,
-                            color: 'bg-blue-50 text-blue-600 border-blue-100',
-                            active: 'bg-blue-600 text-white border-blue-600',
-                          },
-                        ].map((btn) => (
-                          <StatusButton
-                            key={btn.status}
-                            label={btn.label}
-                            active={status === btn.status}
-                            color={btn.color}
-                            activeColor={btn.active}
-                            onClick={() =>
-                              onUpdateStatus(
-                                selectedHwId,
-                                student.id,
-                                status === btn.status
-                                  ? HomeworkStatus.PENDING
-                                  : btn.status,
-                              )
-                            }
-                          />
-                        ))}
+                        {(() => {
+                          const isPending = pendingOperations.has(
+                            `sub-${selectedHwId}-${student.id}`,
+                          )
+
+                          return [
+                            {
+                              label: 'Tamam',
+                              status: HomeworkStatus.DONE,
+                              color:
+                                'bg-emerald-50 text-emerald-600 border-emerald-100',
+                              active:
+                                'bg-emerald-600 text-white border-emerald-600',
+                            },
+                            {
+                              label: 'Yapmadı',
+                              status: HomeworkStatus.MISSING,
+                              color: 'bg-rose-50 text-rose-600 border-rose-100',
+                              active: 'bg-rose-600 text-white border-rose-600',
+                            },
+                            {
+                              label: 'Eksik',
+                              status: HomeworkStatus.INCOMPLETE,
+                              color:
+                                'bg-amber-50 text-amber-600 border-amber-100',
+                              active:
+                                'bg-amber-600 text-white border-amber-600',
+                            },
+                            {
+                              label: 'Gelmedi',
+                              status: HomeworkStatus.ABSENT,
+                              color:
+                                'bg-purple-50 text-purple-600 border-purple-100',
+                              active:
+                                'bg-purple-600 text-white border-purple-600',
+                            },
+                            {
+                              label: 'Getirmedi',
+                              status: HomeworkStatus.NOT_BROUGHT,
+                              color: 'bg-blue-50 text-blue-600 border-blue-100',
+                              active: 'bg-blue-600 text-white border-blue-600',
+                            },
+                          ].map((btn) => (
+                            <StatusButton
+                              key={btn.status}
+                              label={btn.label}
+                              active={status === btn.status}
+                              color={btn.color}
+                              activeColor={btn.active}
+                              isLoading={isPending && status === btn.status} // Only show loader on the active button if pending
+                              disabled={isPending}
+                              onClick={() =>
+                                onUpdateStatus(
+                                  selectedHwId,
+                                  student.id,
+                                  status === btn.status
+                                    ? HomeworkStatus.PENDING
+                                    : btn.status,
+                                )
+                              }
+                            />
+                          ))
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
@@ -439,17 +450,22 @@ const StatusButton: React.FC<{
   color: string
   activeColor: string
   onClick: () => void
-}> = ({ label, active, color, activeColor, onClick }) => (
+  isLoading?: boolean
+  disabled?: boolean
+}> = ({ label, active, color, activeColor, onClick, isLoading, disabled }) => (
   <button
     onClick={(e) => {
       e.preventDefault()
-      onClick()
+      if (!disabled) onClick()
     }}
+    disabled={disabled}
     className={cn(
-      'flex-1 min-w-[70px] text-center py-2.5 rounded-lg text-[10px] font-black border transition-all uppercase tracking-tighter shadow-sm',
+      'flex-1 min-w-[70px] text-center py-2.5 rounded-lg text-[10px] font-black border transition-all uppercase tracking-tighter shadow-sm flex items-center justify-center gap-1',
       active ? activeColor : cn(color, 'hover:shadow-md'),
+      disabled && 'opacity-70 cursor-not-allowed',
     )}
   >
+    {isLoading && <i className="fas fa-circle-notch fa-spin text-[10px]"></i>}
     {label}
   </button>
 )

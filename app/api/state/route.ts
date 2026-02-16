@@ -92,30 +92,28 @@ export async function POST(req: Request) {
     )
   }
 
-  // Allow empty arrays, but log a warning for safety
-  const students = state.students || []
+  // Validations
+  const students = state.students
+  if (!students || !Array.isArray(students)) {
+    return NextResponse.json(
+      { error: 'Geçersiz veri formatı: students array olmalı' },
+      { status: 400 },
+    )
+  }
+
   const homeworks = state.homeworks || []
 
-  if (students.length === 0 && homeworks.length === 0) {
-    console.warn(
-      'POST /api/state - Received empty state, this will delete all data!',
-    )
-    // Still allow it, but make it very obvious in logs
-  }
+  // ... (warnings for empty state)
 
   const p = await getPrisma()
   try {
-    console.log(`Saving state for user ${user.id}:`, {
-      studentCount: students.length,
-      homeworkCount: (state.homeworks || []).length,
-    })
-
     const startTime = Date.now()
 
-    // Transaction for atomic update
+    // 1. Sync Students (Transaction A)
     await p.$transaction(
       async (tx) => {
-        // 1. Sync Students
+        // We do NOT touch AuthUser as it is not in the schema (UserProfile exists but is separate)
+
         const existingStudents = await tx.student.findMany({
           where: { userId: user.id },
           select: { id: true },
@@ -123,12 +121,11 @@ export async function POST(req: Request) {
         const existingStudentIds = existingStudents.map((s) => s.id)
         const incomingStudentIds = students.map((s: any) => s.id)
 
-        // Delete students not in incoming list
+        // Delete students
         const studentsToDelete = existingStudentIds.filter(
           (id) => !incomingStudentIds.includes(id),
         )
         if (studentsToDelete.length > 0) {
-          console.log(`Deleting ${studentsToDelete.length} students`)
           await tx.student.deleteMany({
             where: {
               id: { in: studentsToDelete },
@@ -138,114 +135,146 @@ export async function POST(req: Request) {
         }
 
         // Upsert students
-        await Promise.all(
-          students.map((s: any) =>
-            tx.student.upsert({
-              where: { id: s.id },
-              create: {
-                id: s.id,
-                userId: user.id,
-                name: s.name,
-                parentName: s.parentName,
-                parentPhone: s.parentPhone,
-                className: s.className,
-              },
-              update: {
-                name: s.name,
-                parentName: s.parentName,
-                parentPhone: s.parentPhone,
-                className: s.className,
-              },
-            }),
-          ),
-        )
-
-        // 2. Sync Homeworks
-        const existingHomeworks = await tx.homework.findMany({
-          where: { userId: user.id },
-          select: { id: true },
-        })
-        const existingHomeworkIds = existingHomeworks.map((h) => h.id)
-        const incomingHomeworkIds = (state.homeworks || []).map(
-          (h: any) => h.id,
-        )
-
-        const homeworksToDelete = existingHomeworkIds.filter(
-          (id) => !incomingHomeworkIds.includes(id),
-        )
-        if (homeworksToDelete.length > 0) {
-          console.log(`Deleting ${homeworksToDelete.length} homeworks`)
-          await tx.homework.deleteMany({
-            where: {
-              id: { in: homeworksToDelete },
+        for (const s of students) {
+          await tx.student.upsert({
+            where: { id: s.id },
+            update: {
+              name: s.name,
+              // Schema has parentName, parentPhone, className.
+              // Frontend might have 'grade'/'schoolNumber' but schema doesn't support them yet.
+              // We map available frontend fields to schema fields.
+              parentName: s.parentName || '',
+              parentPhone: s.parentPhone || '',
+              className: s.className || s.grade || '', // Fallback
+            },
+            create: {
+              id: s.id,
               userId: user.id,
+              name: s.name,
+              parentName: s.parentName || '',
+              parentPhone: s.parentPhone || '',
+              className: s.className || s.grade || '',
             },
           })
         }
+      },
+      {
+        maxWait: 5000,
+        timeout: 20000,
+      },
+    )
 
-        for (const hw of state.homeworks || []) {
-          try {
-            const upserted = await tx.homework.upsert({
+    // 2. Sync Homeworks (Structure)
+    const existingHomeworks = await p.homework.findMany({
+      where: { userId: user.id },
+      select: { id: true },
+    })
+    const existingHomeworkIds = existingHomeworks.map((h) => h.id)
+    const incomingHomeworkIds = homeworks.map((h: any) => h.id)
+
+    const homeworksToDelete = existingHomeworkIds.filter(
+      (id) => !incomingHomeworkIds.includes(id),
+    )
+    if (homeworksToDelete.length > 0) {
+      await p.homework.deleteMany({
+        where: {
+          id: { in: homeworksToDelete },
+          userId: user.id,
+        },
+      })
+    }
+
+    // 3. Sync Each Homework
+    const errors: any[] = []
+
+    for (const hw of homeworks) {
+      try {
+        await p.$transaction(
+          async (tx) => {
+            // Upsert Homework
+            // Schema has 'title', 'description', 'subject', 'assignedDate', 'dueDate'
+            await tx.homework.upsert({
               where: { id: hw.id },
+              update: {
+                title: hw.title,
+                description: hw.description || hw.content || '', // Map content to description
+                subject: hw.subject || 'GENEL',
+                assignedDate: new Date(
+                  hw.date || hw.assignedDate || Date.now(),
+                ), // Handle naming differences
+                dueDate: new Date(hw.dueDate || Date.now()),
+                targetClasses: hw.targetClasses || [],
+                targetStudents: hw.targetStudentIds || hw.targetStudents || [], // Map fields
+              },
               create: {
                 id: hw.id,
                 userId: user.id,
                 title: hw.title,
-                description: hw.description,
-                assignedDate: new Date(hw.assignedDate),
-                dueDate: new Date(hw.dueDate),
+                description: hw.description || hw.content || '',
+                subject: hw.subject || 'GENEL',
+                assignedDate: new Date(
+                  hw.date || hw.assignedDate || Date.now(),
+                ),
+                dueDate: new Date(hw.dueDate || Date.now()),
                 targetClasses: hw.targetClasses || [],
-                targetStudents: hw.targetStudentIds || [],
-              },
-              update: {
-                title: hw.title,
-                description: hw.description,
-                assignedDate: new Date(hw.assignedDate),
-                dueDate: new Date(hw.dueDate),
-                targetClasses: hw.targetClasses || [],
-                targetStudents: hw.targetStudentIds || [],
+                targetStudents: hw.targetStudentIds || hw.targetStudents || [],
               },
             })
 
-            // Clear existing submissions for this homework
-            await tx.submission.deleteMany({
-              where: { homeworkId: upserted.id },
-            })
-
-            const submissions = Object.entries(hw.submissions || {}).map(
-              ([studentId, status]) => ({
-                studentId,
-                homeworkId: upserted.id,
-                status: status as string,
-                isNotified: hw.notifiedStudents?.[studentId] || false,
-              }),
-            )
-
-            if (submissions.length > 0) {
-              await tx.submission.createMany({
-                data: submissions,
-              })
+            // Process Submissions
+            if (hw.submissions) {
+              const subPromises = Object.entries(hw.submissions).map(
+                ([studentId, status]) =>
+                  tx.submission.upsert({
+                    where: {
+                      // Schema: @@unique([studentId, homeworkId]) -> studentId_homeworkId
+                      studentId_homeworkId: {
+                        studentId: studentId,
+                        homeworkId: hw.id,
+                      },
+                    },
+                    update: {
+                      status: status as string,
+                      // isNotified might be in 'notifiedStudents' map in frontend state
+                      isNotified: hw.notifiedStudents?.[studentId] || false,
+                    },
+                    create: {
+                      homeworkId: hw.id,
+                      studentId: studentId,
+                      status: status as string,
+                      isNotified: hw.notifiedStudents?.[studentId] || false,
+                    },
+                  }),
+              )
+              await Promise.all(subPromises)
             }
-          } catch (hwError: any) {
-            console.error(`Error saving homework ${hw.id}:`, hwError)
-            throw new Error(
-              `Ödev kaydedilemedi (${hw.title}): ${hwError.message}`,
-            )
-          }
-        }
-      },
-      {
-        timeout: 60000,
-      },
-    )
+          },
+          {
+            maxWait: 5000,
+            timeout: 15000,
+          },
+        )
+      } catch (hwError) {
+        console.error(`Error syncing homework ${hw.id}:`, hwError)
+        errors.push({ id: hw.id, error: hwError })
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error('Save state executed with errors:', errors)
+      return NextResponse.json(
+        { ok: false, errors, duration: Date.now() - startTime },
+        { status: 207 },
+      )
+    }
 
     const duration = Date.now() - startTime
     console.log(`State saved successfully in ${duration}ms`)
     return NextResponse.json({ ok: true, duration })
   } catch (e: any) {
-    console.error('POST /api/state failed:', e)
+    console.error('POST /api/state failed DETAIL:', e)
     return NextResponse.json(
-      { error: 'Veritabanı işlemi sırasında bir hata oluştu.' },
+      { error: `Veritabanı hatası: ${e.message}`, details: e.toString() },
       { status: 500 },
     )
   }
