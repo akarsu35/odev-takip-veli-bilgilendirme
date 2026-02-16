@@ -72,4 +72,16 @@ model UserProfile {
   updatedAt  DateTime @updatedAt
 }
 
-// ETÜT TAKİP MODELLERİ (Added)
+// ETÜT TAKİP MODELLERİ
+
+model EtutSession {
+  id        String   @id @default(uuid())
+  studentId String
+  subject   String
+  date      DateTime
+  duration  Int // Dakika cinsinden
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
