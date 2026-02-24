@@ -53,6 +53,7 @@ const HomeworkManager: React.FC<Props> = ({
   const [targetClasses, setTargetClasses] = useState<string[]>([])
   const [targetStudentIds, setTargetStudentIds] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [classFilter, setClassFilter] = useState<string>('ALL')
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [analyzingHomeworkId, setAnalyzingHomeworkId] = useState<string | null>(
     null,
@@ -613,110 +614,229 @@ const HomeworkManager: React.FC<Props> = ({
 
       {/* Homework List Card */}
       <Card className="border-slate-100 shadow-sm overflow-hidden text-left">
-        <CardHeader className="bg-slate-50/50 p-4 border-b border-slate-100">
-          <CardTitle className="text-base font-bold text-slate-700">
-            Ödev Listesi ({homeworks.length})
-          </CardTitle>
+        <CardHeader className="bg-slate-50/50 p-4 border-b border-slate-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold text-slate-700">
+              Ödev Listesi ({homeworks.length})
+            </CardTitle>
+          </div>
+          {/* Class Filter Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              onClick={() => setClassFilter('ALL')}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap border',
+                classFilter === 'ALL'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                  : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300',
+              )}
+            >
+              <i className="fas fa-layer-group mr-1.5"></i>Tümü
+            </button>
+            {existingClasses.map((cls) => {
+              const count = homeworks.filter((h) =>
+                h.targetClasses.includes(cls),
+              ).length
+              return (
+                <button
+                  key={cls}
+                  onClick={() => setClassFilter(cls)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap border flex items-center gap-1.5',
+                    classFilter === cls
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300',
+                  )}
+                >
+                  {cls}
+                  <span
+                    className={cn(
+                      'text-[10px] font-black px-1.5 py-0.5 rounded-full',
+                      classFilter === cls
+                        ? 'bg-white/20 text-white'
+                        : 'bg-slate-100 text-slate-500',
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="divide-y divide-slate-100">
-            {homeworks.length === 0 ? (
-              <div className="p-16 text-center text-slate-400 space-y-3">
-                <i className="fas fa-book-open text-3xl opacity-20"></i>
-                <p className="italic text-sm font-medium">
-                  Henüz bir ödev oluşturulmamış.
-                </p>
-              </div>
-            ) : (
-              homeworks.map((h) => (
-                <div
-                  key={h.id}
-                  className="p-5 flex flex-col sm:flex-row justify-between items-start gap-4 hover:bg-slate-50 transition-colors group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                        {h.title}
-                      </h4>
-                      <div className="flex gap-1.5">
-                        {h.targetClasses.map((cls) => (
-                          <span
-                            key={cls}
-                            className="text-[10px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase tracking-wider border border-indigo-100"
-                          >
-                            {cls}
-                          </span>
-                        ))}
-                        {h.targetStudentIds &&
-                          h.targetStudentIds.length > 0 && (
-                            <span className="text-[10px] font-black bg-amber-50 text-amber-700 px-2 py-0.5 rounded uppercase tracking-wider border border-amber-100">
-                              {h.targetStudentIds.length} ÖZEL
-                            </span>
-                          )}
-                      </div>
-                    </div>
-                    <p className="text-slate-500 text-sm line-clamp-2 font-medium mb-3">
-                      {h.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <span className="flex items-center gap-1.5">
-                        <i className="fas fa-calendar-alt text-indigo-400"></i>
-                        Teslim Tarihi:{' '}
-                        {isMounted
-                          ? new Date(h.dueDate).toLocaleDateString('tr-TR')
-                          : h.dueDate.split('T')[0]}
+          {(() => {
+            const filtered =
+              classFilter === 'ALL'
+                ? [...homeworks]
+                : homeworks.filter((h) => h.targetClasses.includes(classFilter))
+
+            const sorted = filtered.sort(
+              (a, b) =>
+                new Date(b.assignedDate).getTime() -
+                new Date(a.assignedDate).getTime(),
+            )
+
+            if (sorted.length === 0) {
+              return (
+                <div className="p-16 text-center text-slate-400 space-y-3">
+                  <i className="fas fa-book-open text-3xl opacity-20"></i>
+                  <p className="italic text-sm font-medium">
+                    {homeworks.length === 0
+                      ? 'Henüz bir ödev oluşturulmamış.'
+                      : 'Bu sınıfa ait ödev bulunamadı.'}
+                  </p>
+                </div>
+              )
+            }
+
+            // Group by date label
+            const now = new Date()
+            const startOfToday = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            )
+            const startOfWeek = new Date(startOfToday)
+            startOfWeek.setDate(
+              startOfToday.getDate() - startOfToday.getDay() + 1,
+            )
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+            const getGroup = (hw: (typeof sorted)[0]) => {
+              const d = new Date(hw.assignedDate)
+              if (d >= startOfToday) return 'Bugün'
+              const yesterday = new Date(startOfToday)
+              yesterday.setDate(startOfToday.getDate() - 1)
+              if (d >= yesterday) return 'Dün'
+              if (d >= startOfWeek) return 'Bu Hafta'
+              if (d >= startOfMonth) return 'Bu Ay'
+              return 'Önceki'
+            }
+
+            const groups: { label: string; items: typeof sorted }[] = []
+            const groupOrder = ['Bugün', 'Dün', 'Bu Hafta', 'Bu Ay', 'Önceki']
+            groupOrder.forEach((label) => {
+              const items = sorted.filter((hw) => getGroup(hw) === label)
+              if (items.length > 0) groups.push({ label, items })
+            })
+
+            return (
+              <div className="divide-y divide-slate-100">
+                {groups.map(({ label, items }) => (
+                  <div key={label}>
+                    <div className="px-5 py-2.5 bg-slate-50 flex items-center gap-2">
+                      <i className="fas fa-clock text-[10px] text-slate-400"></i>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {label}
+                      </span>
+                      <span className="text-[10px] font-black text-slate-300 ml-1">
+                        ({items.length})
                       </span>
                     </div>
-                  </div>
-                  <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto overflow-x-auto pb-1 no-scrollbar opacity-60 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs justify-start h-9 px-3"
-                      onClick={() => setNotifyModalHomework(h)}
-                    >
-                      <i className="fab fa-whatsapp mr-2 text-base"></i>
-                      Bildir
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs justify-start h-9 px-3"
-                      onClick={() => setAnalyzingHomeworkId(h.id)}
-                    >
-                      <i className="fas fa-chart-pie mr-2 text-base"></i>
-                      Analiz
-                    </Button>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
-                        onClick={() => handleEdit(h)}
+                    {items.map((h) => (
+                      <div
+                        key={h.id}
+                        className="p-5 flex flex-col sm:flex-row justify-between items-start gap-4 hover:bg-slate-50 transition-colors group border-t border-slate-50"
                       >
-                        <i className="fas fa-pen text-sm"></i>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              'Bu ödevi silmek istediğinize emin misiniz?',
-                            )
-                          ) {
-                            onDelete(h.id)
-                            toast.success('Ödev silindi 🗑️')
-                          }
-                        }}
-                      >
-                        <i className="fas fa-trash-can text-sm"></i>
-                      </Button>
-                    </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                              {h.title}
+                            </h4>
+                            <div className="flex gap-1.5">
+                              {h.targetClasses.map((cls) => (
+                                <span
+                                  key={cls}
+                                  className="text-[10px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded uppercase tracking-wider border border-indigo-100"
+                                >
+                                  {cls}
+                                </span>
+                              ))}
+                              {h.targetStudentIds &&
+                                h.targetStudentIds.length > 0 && (
+                                  <span className="text-[10px] font-black bg-amber-50 text-amber-700 px-2 py-0.5 rounded uppercase tracking-wider border border-amber-100">
+                                    {h.targetStudentIds.length} ÖZEL
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                          <p className="text-slate-500 text-sm line-clamp-2 font-medium mb-3">
+                            {h.description}
+                          </p>
+                          <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5">
+                              <i className="fas fa-calendar-plus text-slate-400"></i>
+                              Verildi:{' '}
+                              {isMounted
+                                ? new Date(h.assignedDate).toLocaleDateString(
+                                    'tr-TR',
+                                  )
+                                : h.assignedDate.split('T')[0]}
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <i className="fas fa-calendar-check text-indigo-400"></i>
+                              Teslim:{' '}
+                              {isMounted
+                                ? new Date(h.dueDate).toLocaleDateString(
+                                    'tr-TR',
+                                  )
+                                : h.dueDate.split('T')[0]}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto overflow-x-auto pb-1 no-scrollbar opacity-60 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs justify-start h-9 px-3"
+                            onClick={() => setNotifyModalHomework(h)}
+                          >
+                            <i className="fab fa-whatsapp mr-2 text-base"></i>
+                            Bildir
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold text-xs justify-start h-9 px-3"
+                            onClick={() => setAnalyzingHomeworkId(h.id)}
+                          >
+                            <i className="fas fa-chart-pie mr-2 text-base"></i>
+                            Analiz
+                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
+                              onClick={() => handleEdit(h)}
+                            >
+                              <i className="fas fa-pen text-sm"></i>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    'Bu ödevi silmek istediğinize emin misiniz?',
+                                  )
+                                ) {
+                                  onDelete(h.id)
+                                  toast.success('Ödev silindi 🗑️')
+                                }
+                              }}
+                            >
+                              <i className="fas fa-trash-can text-sm"></i>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))}
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
