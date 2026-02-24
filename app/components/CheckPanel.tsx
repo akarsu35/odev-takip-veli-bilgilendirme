@@ -42,6 +42,8 @@ const CheckPanel: React.FC<Props> = ({
   const [isLoading, setIsLoading] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [viewMode, setViewMode] = useState<'homework' | 'status'>('homework')
+  const [sortBy, setSortBy] = useState<'name' | 'status'>('name')
+  const [statusFilter, setStatusFilter] = useState<string>('ALL')
 
   const classes = Array.from(new Set(students.map((s) => s.className))).sort()
 
@@ -107,6 +109,26 @@ const CheckPanel: React.FC<Props> = ({
         turkishSearch(s.name, searchTerm) ||
         turkishSearch(s.parentName, searchTerm)
       )
+    })
+    .filter((s) => {
+      if (statusFilter === 'ALL') return true
+      const st = selectedHw?.submissions[s.id] || HomeworkStatus.PENDING
+      return st === statusFilter
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name, 'tr')
+      // sort by status order
+      const order = [
+        HomeworkStatus.PENDING,
+        HomeworkStatus.DONE,
+        HomeworkStatus.MISSING,
+        HomeworkStatus.INCOMPLETE,
+        HomeworkStatus.ABSENT,
+        HomeworkStatus.NOT_BROUGHT,
+      ]
+      const sa = selectedHw?.submissions[a.id] || HomeworkStatus.PENDING
+      const sb = selectedHw?.submissions[b.id] || HomeworkStatus.PENDING
+      return order.indexOf(sa) - order.indexOf(sb)
     })
 
   const handleSendWhatsApp = async (
@@ -249,17 +271,69 @@ const CheckPanel: React.FC<Props> = ({
                       Kontrol Edilecek Ödev
                     </label>
                     {filteredHomeworks.length > 0 ? (
-                      <select
-                        value={selectedHwId}
-                        onChange={(e) => setSelectedHwId(e.target.value)}
-                        className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-600 outline-none bg-slate-50 font-bold text-slate-800 transition-all cursor-pointer"
-                      >
-                        {filteredHomeworks.map((h) => (
-                          <option key={h.id} value={h.id}>
-                            {h.title}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                        {filteredHomeworks
+                          .slice()
+                          .sort(
+                            (a, b) =>
+                              new Date(b.assignedDate).getTime() -
+                              new Date(a.assignedDate).getTime(),
+                          )
+                          .map((h) => {
+                            const isSelected = selectedHwId === h.id
+                            return (
+                              <button
+                                key={h.id}
+                                onClick={() => setSelectedHwId(h.id)}
+                                className={cn(
+                                  'flex-shrink-0 w-56 text-left p-3 rounded-xl border-2 transition-all',
+                                  isSelected
+                                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                                    : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm',
+                                )}
+                              >
+                                <div
+                                  className={cn(
+                                    'text-xs font-black mb-1 leading-tight line-clamp-2',
+                                    isSelected
+                                      ? 'text-indigo-700'
+                                      : 'text-slate-800',
+                                  )}
+                                >
+                                  {isSelected && (
+                                    <i className="fas fa-check-circle mr-1 text-indigo-500"></i>
+                                  )}
+                                  {h.title}
+                                </div>
+                                {h.description && (
+                                  <p
+                                    className={cn(
+                                      'text-[10px] line-clamp-2 mb-2 leading-relaxed',
+                                      isSelected
+                                        ? 'text-indigo-500'
+                                        : 'text-slate-400',
+                                    )}
+                                  >
+                                    {h.description}
+                                  </p>
+                                )}
+                                <div
+                                  className={cn(
+                                    'text-[9px] font-black uppercase tracking-widest flex items-center gap-1',
+                                    isSelected
+                                      ? 'text-indigo-400'
+                                      : 'text-slate-300',
+                                  )}
+                                >
+                                  <i className="fas fa-calendar-check"></i>
+                                  {new Date(h.dueDate).toLocaleDateString(
+                                    'tr-TR',
+                                  )}
+                                </div>
+                              </button>
+                            )
+                          })}
+                      </div>
                     ) : (
                       <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-100 text-amber-700">
                         <i className="fas fa-exclamation-triangle"></i>
@@ -271,6 +345,78 @@ const CheckPanel: React.FC<Props> = ({
                   </div>
                 )}
               </div>
+
+              {/* Sort & Status Filter */}
+              {selectedHwId && (
+                <div className="space-y-3 pt-1">
+                  {/* Sort */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                      Sırala
+                    </span>
+                    <div className="flex gap-1.5">
+                      {[
+                        {
+                          key: 'name',
+                          label: 'A–Z',
+                          icon: 'fa-sort-alpha-down',
+                        },
+                        {
+                          key: 'status',
+                          label: 'Durum',
+                          icon: 'fa-layer-group',
+                        },
+                      ].map((s) => (
+                        <button
+                          key={s.key}
+                          onClick={() => setSortBy(s.key as 'name' | 'status')}
+                          className={cn(
+                            'px-3 py-1 rounded-lg text-[10px] font-black border transition-all flex items-center gap-1',
+                            sortBy === s.key
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                              : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300',
+                          )}
+                        >
+                          <i className={cn('fas', s.icon, 'text-[9px]')}></i>
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Status Filter — only shown when sorting by status */}
+                  {sortBy === 'status' && (
+                    <div className="flex items-center gap-2 flex-wrap animate-in fade-in slide-in-from-top-1 duration-200">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                        Filtre
+                      </span>
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+                        {[
+                          { key: 'ALL', label: 'Tümü' },
+                          { key: 'PENDING', label: 'Bekleyen' },
+                          { key: 'DONE', label: 'Tamam' },
+                          { key: 'MISSING', label: 'Yapmadı' },
+                          { key: 'INCOMPLETE', label: 'Eksik' },
+                          { key: 'ABSENT', label: 'Gelmedi' },
+                          { key: 'NOT_BROUGHT', label: 'Getirmedi' },
+                        ].map((f) => (
+                          <button
+                            key={f.key}
+                            onClick={() => setStatusFilter(f.key)}
+                            className={cn(
+                              'px-3 py-1 rounded-lg text-[10px] font-black border transition-all whitespace-nowrap',
+                              statusFilter === f.key
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-300',
+                            )}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

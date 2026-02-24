@@ -135,14 +135,30 @@ const StatusFilterView: React.FC<Props> = ({
     const student = students.find((s) => s.id === selectedStudentId)
     if (!student) return null
     const allHomeworks = getAllHomeworksForStudent(student)
+
+    // Status priority: selected filter first, then other problematics, then pending, then done
+    const statusOrder = [
+      selectedStatus,
+      HomeworkStatus.MISSING,
+      HomeworkStatus.INCOMPLETE,
+      HomeworkStatus.NOT_BROUGHT,
+      HomeworkStatus.ABSENT,
+      HomeworkStatus.PENDING,
+      HomeworkStatus.DONE,
+    ].filter((v, i, arr) => arr.indexOf(v) === i) // deduplicate
+
+    const sorted = allHomeworks.sort(
+      (a, b) => statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status),
+    )
+
     return {
       student,
-      homeworksWithStatus: allHomeworks.map((h) => ({
+      homeworksWithStatus: sorted.map((h) => ({
         homework: h.homework,
         status: h.status,
       })),
     }
-  }, [selectedStudentId, students, homeworks])
+  }, [selectedStudentId, students, homeworks, selectedStatus])
 
   const studentsWithStatus = useMemo(() => {
     const result: StudentHomeworkInfo[] = []
@@ -424,6 +440,18 @@ const StatusFilterView: React.FC<Props> = ({
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                 <i className="fas fa-list-ul"></i>
                 Ödev Takip Geçmişi
+                <span
+                  className={cn(
+                    'ml-1 px-2 py-0.5 rounded-full text-[9px] border',
+                    config.lightBg,
+                    config.textColor,
+                    config.borderColor,
+                  )}
+                >
+                  {selectedStatus === HomeworkStatus.MISSING
+                    ? 'Yapılmadılar önce'
+                    : `${config.label}'lar önce`}
+                </span>
               </h4>
               <div className="space-y-3">
                 {selectedStudent.homeworksWithStatus.map(
@@ -440,8 +468,8 @@ const StatusFilterView: React.FC<Props> = ({
                         key={homework.id}
                         className={cn(
                           'border shadow-sm transition-all overflow-hidden',
-                          isActiveFor(homework, selectedStudent.student.id)
-                            ? 'scale-[1.02] border-indigo-200 ring-1 ring-indigo-100'
+                          status === selectedStatus
+                            ? `border-l-4 ${config.borderColor} bg-white ring-1 ring-offset-0 ${config.borderColor}`
                             : 'border-slate-100',
                         )}
                       >
