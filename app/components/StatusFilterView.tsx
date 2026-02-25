@@ -129,6 +129,13 @@ const StatusFilterView: React.FC<Props> = ({
   )
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState<string | null>(null)
+  const [selectedClass, setSelectedClass] = useState<string>('ALL')
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(true)
+
+  const classes = useMemo(
+    () => Array.from(new Set(students.map((s) => s.className))).sort(),
+    [students],
+  )
 
   const selectedStudent = useMemo(() => {
     if (!selectedStudentId) return null
@@ -194,10 +201,14 @@ const StatusFilterView: React.FC<Props> = ({
           turkishSearch(item.student.name, searchTerm) ||
           turkishSearch(item.student.parentName, searchTerm),
       )
+      .filter(
+        (item) =>
+          selectedClass === 'ALL' || item.student.className === selectedClass,
+      )
       .sort(
         (a, b) => b.homeworksWithStatus.length - a.homeworksWithStatus.length,
       )
-  }, [students, homeworks, selectedStatus, searchTerm])
+  }, [students, homeworks, selectedStatus, searchTerm, selectedClass])
 
   function getAllHomeworksForStudent(student: Student) {
     return homeworks
@@ -252,47 +263,133 @@ const StatusFilterView: React.FC<Props> = ({
   return (
     <div className="space-y-4">
       {/* Selection Card */}
-      <Card className="border-indigo-100 shadow-md">
-        <CardHeader className="p-4 space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-              Duruma Göre Filtrele
-            </label>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {(
-                Object.keys(STATUS_CONFIG) as Array<keyof typeof STATUS_CONFIG>
-              ).map((status) => {
-                const cfg = STATUS_CONFIG[status]
-                const isActive = selectedStatus === status
-                return (
-                  <button
-                    key={status}
-                    onClick={() => setSelectedStatus(status as HomeworkStatus)}
+      <Card className="sticky top-[72px] z-40 border-indigo-100 shadow-md">
+        {/* Collapsible header */}
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-3 gap-2 text-left"
+        >
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <i className="fas fa-filter text-indigo-500 text-xs flex-shrink-0 self-start mt-0.5"></i>
+            {filtersOpen ? (
+              <span className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                Filtreler
+              </span>
+            ) : (
+              <div className="flex flex-col min-w-0 gap-0.5">
+                {/* Row 1: status badge + class */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
                     className={cn(
-                      'px-4 py-2.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap flex items-center gap-2 uppercase tracking-tighter',
-                      isActive
-                        ? `${cfg.bgColor} text-white border-transparent shadow-lg scale-105 z-10`
-                        : `bg-white ${cfg.textColor} ${cfg.borderColor} hover:${cfg.lightBg}`,
+                      'text-[10px] font-black px-2 py-0.5 rounded-full text-white',
+                      config.bgColor,
                     )}
                   >
-                    <i className={cfg.icon}></i>
-                    {cfg.label}
-                  </button>
-                )
-              })}
-            </div>
+                    <i className={cn(config.icon, 'mr-1 text-[9px]')}></i>
+                    {config.label}
+                  </span>
+                  {selectedClass !== 'ALL' && (
+                    <span className="text-[10px] font-black text-indigo-600">
+                      {selectedClass} Sınıfı
+                    </span>
+                  )}
+                  {studentsWithStatus.length > 0 && (
+                    <span className="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {studentsWithStatus.length} öğrenci
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+          <i
+            className={cn(
+              'fas fa-chevron-down text-slate-400 text-xs transition-transform duration-300 flex-shrink-0',
+              filtersOpen && 'rotate-180',
+            )}
+          ></i>
+        </button>
 
-          <div className="relative">
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <Input
-              placeholder="Öğrenci veya veli ara..."
-              className="pl-9 h-11 bg-slate-50/50"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </CardHeader>
+        {filtersOpen && (
+          <CardHeader className="p-4 pt-0 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Duruma Göre Filtrele
+              </label>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                {(
+                  Object.keys(STATUS_CONFIG) as Array<
+                    keyof typeof STATUS_CONFIG
+                  >
+                ).map((status) => {
+                  const cfg = STATUS_CONFIG[status]
+                  const isActive = selectedStatus === status
+                  return (
+                    <button
+                      key={status}
+                      onClick={() =>
+                        setSelectedStatus(status as HomeworkStatus)
+                      }
+                      className={cn(
+                        'px-4 py-2.5 rounded-xl text-xs font-bold border transition-all whitespace-nowrap flex items-center gap-2 uppercase tracking-tighter',
+                        isActive
+                          ? `${cfg.bgColor} text-white border-transparent shadow-lg scale-105 z-10`
+                          : `bg-white ${cfg.textColor} ${cfg.borderColor} hover:${cfg.lightBg}`,
+                      )}
+                    >
+                      <i className={cfg.icon}></i>
+                      {cfg.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Class filter chips */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                Sınıf
+              </label>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                <button
+                  onClick={() => setSelectedClass('ALL')}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-black border transition-all whitespace-nowrap',
+                    selectedClass === 'ALL'
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
+                  )}
+                >
+                  Tümü
+                </button>
+                {classes.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setSelectedClass(c)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-black border transition-all whitespace-nowrap',
+                      selectedClass === c
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300',
+                    )}
+                  >
+                    {c} Sınıfı
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <Input
+                placeholder="Öğrenci veya veli ara..."
+                className="pl-9 h-11 bg-slate-50/50"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+        )}
       </Card>
 
       {/* Stats Summary Panel */}
