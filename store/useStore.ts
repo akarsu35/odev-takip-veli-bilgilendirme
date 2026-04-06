@@ -140,28 +140,30 @@ export const useStore = create<AppState>((set) => ({
   updateSubmission: (hwId, studentId, status) => {
     const operationId = `sub-${hwId}-${studentId}`
 
-    // 1. Optimistic Update & Set Pending
+    // 1. Optimistic Update & Set Pending — durum değişince bildirim sıfırlanır
     set((state) => ({
       homeworks: state.homeworks.map((hw) =>
         hw.id === hwId
-          ? { ...hw, submissions: { ...hw.submissions, [studentId]: status } }
+          ? {
+              ...hw,
+              submissions: { ...hw.submissions, [studentId]: status },
+              notifiedStudents: {
+                ...(hw.notifiedStudents || {}),
+                [studentId]: false, // Durum değişti → WP butonu tekrar aktif
+              },
+            }
           : hw,
       ),
       pendingOperations: new Set(state.pendingOperations).add(operationId),
       syncStatus: 'syncing',
     }))
 
-    // 2. Persist to DB immediately
     if (!hwId) {
       console.error('Missing homeworkId for submission update')
       return
     }
 
-    // Capture previous status for rollback if needed (simplification: we assume we can just re-fetch or use a snapshot,
-    // but for now, if it fails, we simply mark error. A true rollback would require storing previous value.)
-    // For this implementation, we will mark syncStatus as error.
-
-    db.updateSubmission(hwId, studentId, status)
+    db.updateSubmission(hwId, studentId, status, false) // isNotified: false → yeni bildirim gerekebilir
       .then(() => {
         set((state) => {
           const newPending = new Set(state.pendingOperations)
@@ -183,11 +185,12 @@ export const useStore = create<AppState>((set) => ({
             syncStatus: 'error',
           }
         })
-        // Todo: Consider alerting user or reverting UI
       })
   },
 
-  markAsNotified: (hwId, studentId) =>
+
+  markAsNotified: (hwId, studentId) => {
+    // 1. Optimistic local update
     set((state) => ({
       homeworks: state.homeworks.map((hw) =>
         hw.id === hwId
@@ -200,5 +203,16 @@ export const useStore = create<AppState>((set) => ({
             }
           : hw,
       ),
-    })),
+    }))
+
+    // 2. Persist to DB — mevcut submission statüsünü bulmak için state oku
+    const hw = useStore.getState().homeworks.find((h) => h.id === hwId)
+    const currentStatus = hw?.submissions[studentId]
+    if (currentStatus) {
+      db.updateSubmission(hwId, studentId, currentStatus, true).catch((err) => {
+        console.error('Failed to persist notification status:', err)
+      })
+    }
+  },
+
 }))

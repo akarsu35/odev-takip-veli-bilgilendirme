@@ -202,6 +202,16 @@ const HomeworkManager: React.FC<Props> = ({
         count: relevantStudents.length,
         color: 'indigo',
         icon: 'fas fa-users',
+        filterKey: 'ALL',
+      },
+      {
+        label: 'Bekleyen',
+        count: relevantStudents.filter(
+          (s) => !analyzingHomework.submissions[s.id] || analyzingHomework.submissions[s.id] === HomeworkStatus.PENDING,
+        ).length,
+        color: 'slate',
+        icon: 'fas fa-hourglass-half',
+        filterKey: HomeworkStatus.PENDING,
       },
       {
         label: 'Tamam',
@@ -210,6 +220,7 @@ const HomeworkManager: React.FC<Props> = ({
         ).length,
         color: 'emerald',
         icon: 'fas fa-check-circle',
+        filterKey: HomeworkStatus.DONE,
       },
       {
         label: 'Yapmadı',
@@ -218,6 +229,7 @@ const HomeworkManager: React.FC<Props> = ({
         ).length,
         color: 'rose',
         icon: 'fas fa-times-circle',
+        filterKey: HomeworkStatus.MISSING,
       },
       {
         label: 'Eksik',
@@ -227,6 +239,7 @@ const HomeworkManager: React.FC<Props> = ({
         ).length,
         color: 'amber',
         icon: 'fas fa-exclamation-circle',
+        filterKey: HomeworkStatus.INCOMPLETE,
       },
       {
         label: 'Gelmedi',
@@ -235,6 +248,7 @@ const HomeworkManager: React.FC<Props> = ({
         ).length,
         color: 'violet',
         icon: 'fas fa-user-slash',
+        filterKey: HomeworkStatus.ABSENT,
       },
       {
         label: 'Getirmedi',
@@ -244,6 +258,7 @@ const HomeworkManager: React.FC<Props> = ({
         ).length,
         color: 'blue',
         icon: 'fas fa-box',
+        filterKey: HomeworkStatus.NOT_BROUGHT,
       },
     ]
 
@@ -259,6 +274,7 @@ const HomeworkManager: React.FC<Props> = ({
                 {analyzingHomework.description}
               </CardDescription>
             </div>
+
             <Button
               variant="outline"
               size="sm"
@@ -271,77 +287,49 @@ const HomeworkManager: React.FC<Props> = ({
           </CardHeader>
         </Card>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          {statsArray.map((stat) => (
-            <Card
-              key={stat.label}
-              className={cn('border-none shadow-sm', `bg-${stat.color}-50`)}
-            >
-              <CardContent className="p-4 text-center">
-                <div
-                  className={cn(
-                    'text-2xl font-black mb-1',
-                    `text-${stat.color}-700`,
-                  )}
-                >
-                  {stat.count}
-                </div>
-                <div
-                  className={cn(
-                    'text-[10px] font-black uppercase tracking-wider',
-                    `text-${stat.color}-600/70`,
-                  )}
-                >
-                  {stat.label}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+          {statsArray.map((stat) => {
+            const isActive = analysisFilter === stat.filterKey
+            const colorMap: Record<string, { normal: string; active: string; numNormal: string; numActive: string; labelNormal: string; labelActive: string }> = {
+              indigo:  { normal: 'bg-indigo-50 border-transparent hover:border-indigo-100',  active: 'bg-indigo-100 border-indigo-200',  numNormal: 'text-indigo-700',  numActive: 'text-indigo-800',  labelNormal: 'text-indigo-600/70',  labelActive: 'text-indigo-600' },
+              slate:   { normal: 'bg-slate-50 border-transparent hover:border-slate-100',    active: 'bg-slate-100 border-slate-200',    numNormal: 'text-slate-700',   numActive: 'text-slate-800',   labelNormal: 'text-slate-600/70',   labelActive: 'text-slate-600' },
+              emerald: { normal: 'bg-emerald-50 border-transparent hover:border-emerald-100', active: 'bg-emerald-100 border-emerald-200', numNormal: 'text-emerald-700', numActive: 'text-emerald-800', labelNormal: 'text-emerald-600/70', labelActive: 'text-emerald-600' },
+              rose:    { normal: 'bg-rose-50 border-transparent hover:border-rose-100',      active: 'bg-rose-100 border-rose-200',      numNormal: 'text-rose-700',    numActive: 'text-rose-800',    labelNormal: 'text-rose-600/70',    labelActive: 'text-rose-600' },
+              amber:   { normal: 'bg-amber-50 border-transparent hover:border-amber-100',    active: 'bg-amber-100 border-amber-200',    numNormal: 'text-amber-700',   numActive: 'text-amber-800',   labelNormal: 'text-amber-600/70',   labelActive: 'text-amber-600' },
+              violet:  { normal: 'bg-violet-50 border-transparent hover:border-violet-100',  active: 'bg-violet-100 border-violet-200',  numNormal: 'text-violet-700',  numActive: 'text-violet-800',  labelNormal: 'text-violet-600/70',  labelActive: 'text-violet-600' },
+              blue:    { normal: 'bg-blue-50 border-transparent hover:border-blue-100',      active: 'bg-blue-100 border-blue-200',      numNormal: 'text-blue-700',    numActive: 'text-blue-800',    labelNormal: 'text-blue-600/70',    labelActive: 'text-blue-600' },
+            }
+            const c = colorMap[stat.color] ?? colorMap['indigo']
+            return (
+              <Card
+                key={stat.label}
+                onClick={() => setAnalysisFilter(stat.filterKey)}
+                className={cn(
+                  'border-2 shadow-sm cursor-pointer transition-all hover:scale-105',
+                  isActive ? c.active : c.normal,
+                )}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className={cn('text-2xl font-black mb-1', isActive ? c.numActive : c.numNormal)}>
+                    {stat.count}
+                  </div>
+                  <div className={cn('text-[10px] font-black uppercase tracking-wider', isActive ? c.labelActive : c.labelNormal)}>
+                    {stat.label}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
+
         <Card className="shadow-sm border-slate-100">
-          <CardHeader className="p-4 border-b border-slate-100 space-y-4">
+          <CardHeader className="p-4 border-b border-slate-100">
             <StudentSearch
               value={analysisSearchTerm}
               onChange={setAnalysisSearchTerm}
               placeholder="Öğrenci veya veli ara..."
             />
-            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-              {[
-                'ALL',
-                'PENDING',
-                'DONE',
-                'MISSING',
-                'INCOMPLETE',
-                'ABSENT',
-                'NOT_BROUGHT',
-              ].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setAnalysisFilter(filter)}
-                  className={cn(
-                    'px-4 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap uppercase tracking-tighter',
-                    analysisFilter === filter
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200',
-                  )}
-                >
-                  {filter === 'ALL'
-                    ? 'TÜMÜ'
-                    : filter === 'PENDING'
-                      ? 'BEKLEYEN'
-                      : filter === 'DONE'
-                        ? 'TAMAM'
-                        : filter === 'MISSING'
-                          ? 'YAPILMADI'
-                          : filter === 'INCOMPLETE'
-                            ? 'EKSİK'
-                            : filter === 'ABSENT'
-                              ? 'GELMEDİ'
-                              : 'GETİRMEDİ'}
-                </button>
-              ))}
-            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-slate-100 max-h-[1000px] overflow-y-auto">
